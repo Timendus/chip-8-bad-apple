@@ -45,9 +45,12 @@
   v1 := 128
   v1 &= v0    # v1 is wether this is a diff frame or a keyframe
   if v1 != 0 then clear
-  vE := 127
+  v1 := 64
+  v1 &= v0
+  vE := 63
   vE &= v0    # vE is number of frames to show this image
   vD := 1     # vD is number of bytes consumed so far
+  if v1 == 0 then jump plain-copy
 
   # Do the RLE decoding
   # i points to the first run length
@@ -101,6 +104,7 @@
     if v3 != 32 then
   again
 
+: frame-done
   # Update frame pointer
   i := current-frame
   load v1
@@ -118,6 +122,23 @@
 
   # We're done! 🎉
   loop again
+
+: plain-copy
+  v2 := 8  # X
+  v3 := 0  # Y
+  loop
+    sprite v2 v3 1
+    vF := 1
+    i += vF
+    vD += 1
+    v2 += 8
+    if v2 == 56 begin
+      v2 := 8
+      v3 += 1
+    end
+    if v3 != 32 then
+  again
+  jump frame-done
 
 : current-frame
   :pointer bad_apple_001
