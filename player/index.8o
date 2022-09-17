@@ -1,0 +1,129 @@
+# Bad Apple for XO-CHIP, 2022
+
+: main
+  clear
+  :unpack long bad_apple_001
+  i := current-frame
+  save v1
+  vE := 0     # Set duplicates to zero
+  delay := vE # Reset timing
+
+: main-loop
+  # Sync to 30FPS
+  loop
+    vF := 6
+    if vF key then vF := key  # Pause the video
+    vF := 4
+    if vF key then jump main  # Restart the video
+    vF := delay
+    if vF != 0 then
+  again
+  vF := 4
+  delay := vF
+
+  # Do we have any duplicate frames left to play?
+  if vE != 0 begin
+    vE -= 1
+    jump main-loop
+  end
+
+  # Get pointer to current frame
+  i := current-frame
+  load v1
+  i := smc-load-current-frame
+  save v1
+  0xF0 0x00 # i := long ...
+: smc-load-current-frame
+  0 0
+
+  # Load type and frames
+  load v0
+  #if SCHIP
+    vF := 1
+    i += vF
+  #end
+  v1 := 128
+  v1 &= v0    # v1 is wether this is a diff frame or a keyframe
+  if v1 != 0 then clear
+  vE := 127
+  vE &= v0    # vE is number of frames to show this image
+  vD := 1     # vD is number of bytes consumed so far
+
+  # Do the RLE decoding
+  # i points to the first run length
+  # Don't mess up vD, vE
+  v2 := 8  # X
+  v3 := 0  # Y
+  loop
+    load v0
+    #if SCHIP
+      vF := 1
+      i += vF
+    #end
+    vD += 1
+    v1 := 128
+    v1 &= v0
+    vF := 127
+    v0 &= vF
+
+    if v1 == 0 begin
+      # This is a repeating run, sprite i to the screen v0 times
+      loop
+        sprite v2 v3 1
+        v2 += 8
+        if v2 == 56 begin
+          v2 := 8
+          v3 += 1
+        end
+        v0 -= 1
+        if v0 != 0 then
+      again
+      vF := 1
+      i += vF
+      vD += 1
+    else
+      # This is a copy run, sprite each byte to the screen
+      vD += v0
+      loop
+        sprite v2 v3 1
+        vF := 1
+        i += vF
+        v2 += 8
+        if v2 == 56 begin
+          v2 := 8
+          v3 += 1
+        end
+        v0 -= 1
+        if v0 != 0 then
+      again
+    end
+
+    if v3 != 32 then
+  again
+
+  # Update frame pointer
+  i := current-frame
+  load v1
+  v1 += vD
+  v0 += vF
+  i := current-frame
+  save v1
+
+  # Are we done..?
+  :alias unpack-hi v2
+  :alias unpack-lo v3
+  :unpack long the-end
+  if v0 != v2 then jump main-loop
+  if v1 != v3 then jump main-loop
+
+  # We're done! 🎉
+  loop again
+
+: current-frame
+  :pointer bad_apple_001
+
+#include "frames.8o"
+
+#data
+
+: the-end

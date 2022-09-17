@@ -1,0 +1,16 @@
+{
+  "name": "bad-apple",
+  "scripts": {
+    "scale": "magick mogrify -path ./frames/scaled/ -resize 48x32^ -gravity center -extent 48x32 -threshold 50% -quality 100 ./frames/original/*.png",
+    "encode": "./encoder/index.js",
+    "build": "octopus player/index.8o bin/bad-apple.8o && cat bin/bad-apple.8o | pbcopy",
+    "build-all": "npm run build && npm run build-binary && npm run build-html",
+    "build-binary": "npm run build && octo bin/bad-apple.8o bin/bad-apple.ch8",
+    "build-html": "npm run build && octo --options octo-config.json bin/bad-apple.8o docs/octo/index.html"
+  },
+  "dependencies": {
+    "chipcode": "../../chipcode",
+    "octo-assembler": "^0.1.3",
+    "pngjs": "^6.0.0"
+  }
+}
