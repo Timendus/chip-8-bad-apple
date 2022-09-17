@@ -93,7 +93,7 @@ But still, at this stage I could only store 1800 frames of the 6562 total, while
 leaving us some space for the music. And that at a lower frame rate of 15 frames
 per second.
 
-Now there are roughly three directions we can take this in:
+Now there were roughly three directions we could take this in:
 1. Reduce the frame rate even more, to around 5 frames per second; or
 2. Reduce the image size to about a third of `lores`; or
 3. Start looking into better ways to compress the video, specifically lossy
@@ -101,9 +101,23 @@ Now there are roughly three directions we can take this in:
 
 Obviously there is only one correct answer 😄
 
-But before we get into that, a couple of other things need fixing:
-* We have some weird error in the first couple of frames
-* The aspect ratio is wrong
-* I don't like the quality of the resize; it loses too much detail
+### Cleanup already?!
+
+But before we could get into that, a couple of other things needed fixing:
+
+* I had some weird error in the first couple of frames
+* The aspect ratio was wrong
+* I didn't like the quality of the resize; it lost too much detail
+* Scaling all the frames every time I wanted to change something was too slow
+
+I fixed the last three issues in one go by using ImageMagick to pre-scale the
+video frames, instead of doing that in my script. This way we have more
+fine-grained control over the type of scaling that is done and we can just read
+in the smaller image pixel-by-pixel, which is much faster. I decided to go with
+48x32 pixels, as that is relatively close to a 4:3 ratio, a multiple of eight
+and can be centered on the screen.
+
+An added benefit of losing 16 horizontal pixels is that we're also storing less
+data than before. So now we can cram 2200 frames in roughly the same space!
 
 ### On codecs
