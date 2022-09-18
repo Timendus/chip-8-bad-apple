@@ -1,10 +1,15 @@
 :alias X v2
 :alias Y v3
 
+:const HORIZ_MARGIN 8
+:const OUTPUT_WIDTH 48
+:const OUTPUT_HEIGHT 32
+:calc HORIZ_END { HORIZ_MARGIN + OUTPUT_WIDTH }
+
 # XOR the data at i directly to the screen
 # Don't mess up vB - vE, make sure we update frame pointer
 : plain-copy
-  X := 8
+  X := HORIZ_MARGIN
   Y := 0
   loop
     sprite X Y 1
@@ -13,7 +18,7 @@
     vF := 1
     update-frame-pointer
     next-coordinate
-    if Y != 32 then
+    if Y != OUTPUT_HEIGHT then
   again
   return
 
@@ -21,7 +26,7 @@
 # i points to the first run length
 # Don't mess up vB - vE, make sure we update frame pointer
 : rle-decode
-  X := 8
+  X := HORIZ_MARGIN
   Y := 0
   loop
     load v0
@@ -62,14 +67,14 @@
       again
     end
 
-    if Y != 32 then
+    if Y != OUTPUT_HEIGHT then
   again
   return
 
 : next-coordinate
   X += 8
-  if X == 56 begin
-    X := 8
+  if X == HORIZ_END begin
+    X := HORIZ_MARGIN
     Y += 1
   end
   return
