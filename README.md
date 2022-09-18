@@ -82,20 +82,21 @@ decoder clears the screen before drawing.
 
 To make sure that we always use the smallest version of the frame, the encoder
 checks the lengths of the original (uncompressed) bitmap, the run length encoded
-version of the original and the run length encoded version of the diff.
+version of the original and the run length encoded version of the diff, and
+outputs the smallest of the three.
 
-This, plus the unique nature of the video, as pointed out above, made this data
-compress much better than the 3D VIP'r Maze image data. This data easily
-compressed to an over 50% compression rate. Or in other words: it made the video
-over twice as small.
+Using diffs, plus the unique nature of the video, as pointed out above, made
+this data compress much better than the 3D VIP'r Maze image data. This data
+easily compressed to an over 50% compression rate. Or in other words: it made
+the video less than half as small.
 
 But still, at this stage I could only store the video up to frame 1800 of the
 6562 total, while leaving us some space for the music. And that at a lower frame
-rate of 15 frames per second (I thought, see below 😉).
+rate of 15 frames per second (I thought, but it's even worse, see below 😉).
 
 Now there were roughly three directions we could take this in:
 1. Reduce the frame rate even more; or
-2. Reduce the image size to about a third of `lores`; or
+2. Reduce the image size a lot more; or
 3. Start looking into better ways to compress the video, specifically lossy
    video codecs.
 
@@ -111,7 +112,7 @@ But before we could get into that, a couple of other things needed fixing:
 * Scaling all the frames every time I wanted to change something was too slow
 
 I fixed the last three issues in one go by using ImageMagick to pre-scale the
-video frames, instead of doing that in my script. This way we have more
+video frames, instead of doing that in my encoder script. This way we have more
 fine-grained control over the type of scaling that is done and we can just read
 in the smaller images pixel-by-pixel, which is much faster. I decided to go with
 48x32 pixels, as that is relatively close to a 4:3 ratio, a multiple of eight
