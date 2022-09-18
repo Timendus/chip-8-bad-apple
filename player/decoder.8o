@@ -1,0 +1,71 @@
+:alias X v2
+:alias Y v3
+
+# XOR the data at i directly to the screen
+# Don't mess up vC, vE, make sure we update vD (byte-consumed)
+: plain-copy
+  X := 8
+  Y := 0
+  loop
+    sprite X Y 1
+    vF := 1
+    i += vF
+    bytes-consumed += 1
+    next-coordinate
+    if Y != 32 then
+  again
+  return
+
+# Do the RLE decoding
+# i points to the first run length
+# Don't mess up vC, vE, make sure we update vD (byte-consumed)
+: rle-decode
+  X := 8
+  Y := 0
+  loop
+    load v0
+    #if SCHIP
+      vF := 1
+      i += vF
+    #end
+    bytes-consumed += 1
+    v1 := 128
+    v1 &= v0
+    vF := 127
+    v0 &= vF
+
+    if v1 == 0 begin
+      # This is a repeating run, sprite i to the screen v0 times
+      loop
+        sprite X Y 1
+        next-coordinate
+        v0 -= 1
+        if v0 != 0 then
+      again
+      vF := 1
+      i += vF
+      bytes-consumed += 1
+    else
+      # This is a copy run, sprite each byte to the screen
+      bytes-consumed += v0
+      loop
+        sprite X Y 1
+        vF := 1
+        i += vF
+        next-coordinate
+        v0 -= 1
+        if v0 != 0 then
+      again
+    end
+
+    if Y != 32 then
+  again
+  return
+
+: next-coordinate
+  X += 8
+  if X == 56 begin
+    X := 8
+    Y += 1
+  end
+  return

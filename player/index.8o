@@ -1,12 +1,15 @@
 # Bad Apple for XO-CHIP, 2022
 
+:alias bytes-consumed vD
+:alias frames-per-image vE
+
 : main
   clear
   :unpack long bad_apple_001
   i := current-frame
   save v1
-  vE := 0     # Set duplicates to zero
-  delay := vE # Reset timing
+  frames-per-image := 0
+  delay := frames-per-image # Reset timing
 
 : main-loop
   # Sync to 30FPS
@@ -22,8 +25,8 @@
   delay := vF
 
   # Do we have any duplicate frames left to play?
-  if vE != 0 begin
-    vE -= 1
+  if frames-per-image != 0 begin
+    frames-per-image -= 1
     jump main-loop
   end
 
@@ -36,7 +39,7 @@
 : smc-load-current-frame
   0 0
 
-  # Load type and frames
+  # Load image type and frames per image
   load v0
   #if SCHIP
     vF := 1
@@ -45,70 +48,23 @@
   v1 := 128
   v1 &= v0    # v1 is wether this is a diff frame or a keyframe
   if v1 != 0 then clear
+  frames-per-image := 63
+  frames-per-image &= v0  # number of frames to show this image for
+  bytes-consumed := 1     # number of bytes consumed so far
+
+  # Show/update the image on screen
   v1 := 64
   v1 &= v0
-  vE := 63
-  vE &= v0    # vE is number of frames to show this image
-  vD := 1     # vD is number of bytes consumed so far
-  if v1 == 0 then jump plain-copy
+  if v1 == 0 begin
+    plain-copy
+  else
+    rle-decode
+  end
 
-  # Do the RLE decoding
-  # i points to the first run length
-  # Don't mess up vD, vE
-  v2 := 8  # X
-  v3 := 0  # Y
-  loop
-    load v0
-    #if SCHIP
-      vF := 1
-      i += vF
-    #end
-    vD += 1
-    v1 := 128
-    v1 &= v0
-    vF := 127
-    v0 &= vF
-
-    if v1 == 0 begin
-      # This is a repeating run, sprite i to the screen v0 times
-      loop
-        sprite v2 v3 1
-        v2 += 8
-        if v2 == 56 begin
-          v2 := 8
-          v3 += 1
-        end
-        v0 -= 1
-        if v0 != 0 then
-      again
-      vF := 1
-      i += vF
-      vD += 1
-    else
-      # This is a copy run, sprite each byte to the screen
-      vD += v0
-      loop
-        sprite v2 v3 1
-        vF := 1
-        i += vF
-        v2 += 8
-        if v2 == 56 begin
-          v2 := 8
-          v3 += 1
-        end
-        v0 -= 1
-        if v0 != 0 then
-      again
-    end
-
-    if v3 != 32 then
-  again
-
-: frame-done
   # Update frame pointer
   i := current-frame
   load v1
-  v1 += vD
+  v1 += bytes-consumed
   v0 += vF
   i := current-frame
   save v1
@@ -123,26 +79,10 @@
   # We're done! 🎉
   loop again
 
-: plain-copy
-  v2 := 8  # X
-  v3 := 0  # Y
-  loop
-    sprite v2 v3 1
-    vF := 1
-    i += vF
-    vD += 1
-    v2 += 8
-    if v2 == 56 begin
-      v2 := 8
-      v3 += 1
-    end
-    if v3 != 32 then
-  again
-  jump frame-done
-
 : current-frame
   :pointer bad_apple_001
 
+#include "decoder.8o"
 #include "frames.8o"
 
 #data
