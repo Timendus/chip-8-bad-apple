@@ -87,8 +87,8 @@
   :alias unpack-hi v2
   :alias unpack-lo v3
   :unpack long the-end
-  if v0 != v2 then jump main-loop
-  if v1 != v3 then jump main-loop
+  if current-frame-hi != v2 then jump main-loop
+  if current-frame-lo != v3 then jump main-loop
 
   # We're done! 🎉
   loop again
