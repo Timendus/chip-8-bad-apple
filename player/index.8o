@@ -91,7 +91,10 @@
   if current-frame-lo != v3 then jump main-loop
 
   # We're done! 🎉
-  loop again
+  loop
+    vF := 4
+    if vF key then jump main  # Restart the video
+  again
 
 # Move frame pointer vF bytes
 : update-frame-pointer
