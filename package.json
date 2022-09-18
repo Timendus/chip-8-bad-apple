@@ -6,7 +6,7 @@
     "build": "octopus player/index.8o bin/bad-apple.8o && cat bin/bad-apple.8o | pbcopy",
     "build-all": "npm run build && npm run build-binary && npm run build-html",
     "build-binary": "npm run build && octo bin/bad-apple.8o bin/bad-apple.ch8",
-    "build-html": "npm run build && octo --options octo-config.json bin/bad-apple.8o docs/octo/index.html"
+    "build-html": "mkdir -p dist && npm run build && octo --options octo-config.json bin/bad-apple.8o dist/index.html"
   },
   "dependencies": {
     "chipcode": "../../chipcode",
