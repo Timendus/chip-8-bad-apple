@@ -1,28 +1,50 @@
 # Bad Apple for XO-CHIP, 2022
 
+:alias playing vC
 :alias bytes-consumed vD
 :alias frames-per-image vE
+
+:const STOPPED 0
+:const PLAYING 1
+:const STEPPING 2
 
 : main
   clear
   :unpack long bad_apple_001
   i := current-frame
   save v1
+  playing := PLAYING
   frames-per-image := 0
   delay := frames-per-image # Reset timing
 
 : main-loop
-  # Sync to 30FPS
+  # This loop syncs to 15FPS and does the high-frequency stuff
   loop
+    # Handle key input
     vF := 6
-    if vF key then vF := key  # Pause the video
+    if vF key begin
+      v0 := PLAYING
+      playing ^= v0 # Play / pause the video
+      loop if vF key then again
+    end
+    vF := 9
+    if vF key begin
+      playing := STEPPING
+      loop if vF key then again
+    end
     vF := 4
     if vF key then jump main  # Restart the video
+
+    # Sync to 15FPS
     vF := delay
     if vF != 0 then
   again
-  vF := 4
+  vF := 8
   delay := vF
+
+  # Are we playing?
+  if playing == STOPPED then jump main-loop
+  if playing == STEPPING then playing := STOPPED
 
   # Do we have any duplicate frames left to play?
   if frames-per-image != 0 begin

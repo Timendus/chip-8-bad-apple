@@ -2,7 +2,7 @@
 :alias Y v3
 
 # XOR the data at i directly to the screen
-# Don't mess up vC, vE, make sure we update vD (byte-consumed)
+# Don't mess up vC, vE, make sure we update vD (bytes-consumed)
 : plain-copy
   X := 8
   Y := 0
@@ -18,7 +18,7 @@
 
 # Do the RLE decoding
 # i points to the first run length
-# Don't mess up vC, vE, make sure we update vD (byte-consumed)
+# Don't mess up vC, vE, make sure we update vD (bytes-consumed)
 : rle-decode
   X := 8
   Y := 0

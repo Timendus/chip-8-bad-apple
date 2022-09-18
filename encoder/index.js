@@ -53,7 +53,7 @@ fs.writeFileSync('player/frames.8o',
           const clearBeforeDraw = v.output == 'RLE' || v.output == 'input';
           const rleEncoded = v.output != 'input';
           return `: bad_apple_${v.id} # ${v.output}\n` +
-            '  0x' + ((clearBeforeDraw ? 128 : 0) + (rleEncoded ? 64 : 0) + v.frames).toString(16).padStart(2, '0') + '\n' +
+            '  0x' + ((clearBeforeDraw ? 128 : 0) + (rleEncoded ? 64 : 0) + (v.frames - 1)).toString(16).padStart(2, '0') + '\n' +
             formatForOcto(v[v.output])
         })
         .join('\n')
