@@ -113,11 +113,18 @@ But before we could get into that, a couple of other things needed fixing:
 I fixed the last three issues in one go by using ImageMagick to pre-scale the
 video frames, instead of doing that in my script. This way we have more
 fine-grained control over the type of scaling that is done and we can just read
-in the smaller image pixel-by-pixel, which is much faster. I decided to go with
+in the smaller images pixel-by-pixel, which is much faster. I decided to go with
 48x32 pixels, as that is relatively close to a 4:3 ratio, a multiple of eight
-and can be centered on the screen.
+and can be centered on the screen. To keep the aspect ratio correct, I cropped
+two pixels off the top and bottom of the image.
 
 An added benefit of losing 16 horizontal pixels is that we're also storing less
 data than before. So now we can cram 2200 frames in roughly the same space!
+
+But on the downside, when hunting for my bug (the first issue) I discovered that
+I made a little mistake in the code that allows an image to be shown for
+multiple frames. I was really only playing (and encoding) 7,5FPS, not 15. That
+explains why my calculations were a bit off and also why the video seemed a bit
+choppy.
 
 ### On codecs
