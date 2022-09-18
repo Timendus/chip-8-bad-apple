@@ -2,7 +2,7 @@
 :alias Y v3
 
 # XOR the data at i directly to the screen
-# Don't mess up vC, vE, make sure we update vD (bytes-consumed)
+# Don't mess up vB - vE, make sure we update frame pointer
 : plain-copy
   X := 8
   Y := 0
@@ -10,7 +10,8 @@
     sprite X Y 1
     vF := 1
     i += vF
-    bytes-consumed += 1
+    vF := 1
+    update-frame-pointer
     next-coordinate
     if Y != 32 then
   again
@@ -18,7 +19,7 @@
 
 # Do the RLE decoding
 # i points to the first run length
-# Don't mess up vC, vE, make sure we update vD (bytes-consumed)
+# Don't mess up vB - vE, make sure we update frame pointer
 : rle-decode
   X := 8
   Y := 0
@@ -28,7 +29,8 @@
       vF := 1
       i += vF
     #end
-    bytes-consumed += 1
+    vF := 1
+    update-frame-pointer
     v1 := 128
     v1 &= v0
     vF := 127
@@ -44,10 +46,12 @@
       again
       vF := 1
       i += vF
-      bytes-consumed += 1
+      vF := 1
+      update-frame-pointer
     else
       # This is a copy run, sprite each byte to the screen
-      bytes-consumed += v0
+      vF := v0
+      update-frame-pointer
       loop
         sprite X Y 1
         vF := 1

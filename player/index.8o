@@ -1,7 +1,8 @@
 # Bad Apple for XO-CHIP, 2022
 
-:alias playing vC
-:alias bytes-consumed vD
+:alias current-frame-hi vB
+:alias current-frame-lo vC
+:alias playing vD
 :alias frames-per-image vE
 
 :const STOPPED 0
@@ -10,9 +11,9 @@
 
 : main
   clear
+  :alias unpack-hi current-frame-hi
+  :alias unpack-lo current-frame-lo
   :unpack long bad_apple_001
-  i := current-frame
-  save v1
   playing := PLAYING
   frames-per-image := 0
   delay := frames-per-image # Reset timing
@@ -53,10 +54,8 @@
   end
 
   # Get pointer to current frame
-  i := current-frame
-  load v1
   i := smc-load-current-frame
-  save v1
+  save current-frame-hi - current-frame-lo
   0xF0 0x00 # i := long ...
 : smc-load-current-frame
   0 0
@@ -68,11 +67,12 @@
     i += vF
   #end
   v1 := 128
-  v1 &= v0    # v1 is wether this is a diff frame or a keyframe
+  v1 &= v0                # v1 is wether this is a diff frame or a keyframe
   if v1 != 0 then clear
   frames-per-image := 63
   frames-per-image &= v0  # number of frames to show this image for
-  bytes-consumed := 1     # number of bytes consumed so far
+  vF := 1                 # number of bytes consumed so far
+  update-frame-pointer
 
   # Show/update the image on screen
   v1 := 64
@@ -82,14 +82,6 @@
   else
     rle-decode
   end
-
-  # Update frame pointer
-  i := current-frame
-  load v1
-  v1 += bytes-consumed
-  v0 += vF
-  i := current-frame
-  save v1
 
   # Are we done..?
   :alias unpack-hi v2
@@ -101,8 +93,11 @@
   # We're done! 🎉
   loop again
 
-: current-frame
-  :pointer bad_apple_001
+# Move frame pointer vF bytes
+: update-frame-pointer
+  current-frame-lo += vF
+  current-frame-hi += vF
+  return
 
 #include "decoder.8o"
 #include "frames.8o"
