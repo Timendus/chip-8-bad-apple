@@ -39,7 +39,7 @@
     vF := delay
     if vF != 0 then
   again
-  vF := 8
+  vF := 4
   delay := vF
 
   # Are we playing?

@@ -89,12 +89,12 @@ compress much better than the 3D VIP'r Maze image data. This data easily
 compressed to an over 50% compression rate. Or in other words: it made the video
 over twice as small.
 
-But still, at this stage I could only store 1800 frames of the 6562 total, while
-leaving us some space for the music. And that at a lower frame rate of 15 frames
-per second.
+But still, at this stage I could only store the video up to frame 1800 of the
+6562 total, while leaving us some space for the music. And that at a lower frame
+rate of 15 frames per second (I thought, see below 😉).
 
 Now there were roughly three directions we could take this in:
-1. Reduce the frame rate even more, to around 5 frames per second; or
+1. Reduce the frame rate even more; or
 2. Reduce the image size to about a third of `lores`; or
 3. Start looking into better ways to compress the video, specifically lossy
    video codecs.
@@ -119,12 +119,33 @@ and can be centered on the screen. To keep the aspect ratio correct, I cropped
 two pixels off the top and bottom of the image.
 
 An added benefit of losing 16 horizontal pixels is that we're also storing less
-data than before. So now we can cram 2200 frames in roughly the same space!
+data than before. So now we can cram images up to frame 2200 in roughly the same
+space!
 
 But on the downside, when hunting for my bug (the first issue) I discovered that
 I made a little mistake in the code that allows an image to be shown for
 multiple frames. I was really only playing (and encoding) 7,5FPS, not 15. That
 explains why my calculations were a bit off and also why the video seemed a bit
-choppy.
+choppy. Fixing that to be back at a steady 15FPS of course meant that we did one
+step forward and two steps back.
+
+It's not as big of a deal as it may seem though, since a higher FPS rate
+actually compresses better. Because the difference between successive images is
+actually smaller. You'd expect that we could only fit the video in until frame
+1100 at the correct 15FPS now (since that's half of 2200), but I was getting
+somewhere close to 1500. This made me curious to see if the same holds for
+larger frames with more pixels (`hires`, anyone?!). Still, this was an
+unfortunate step back.
+
+Other than that, the actual bug turned out to just be an issue with the original
+frame images that I was using. Somehow a duplicate of frame 88 ended up in the
+file of frame 61. So be warned when downloading an archive from a random
+stranger on the internet that it may not always be 100% perfect 😉 I duplicated
+frame 62 into frame 61 and called it a day. I don't notice one double frame,
+especially at half the frame rate.
+
+The end result after all of this cleanup:
+
+![The video in the correct aspect ratio, with the proper frame rate and no more weird frame 61](./pictures/after-cleanup.gif)
 
 ### On codecs
