@@ -149,4 +149,11 @@ The end result after all of this cleanup:
 
 ![The video in the correct aspect ratio, with the proper frame rate and no more weird frame 61](./pictures/after-cleanup.gif)
 
+I also tried to tell ImageMagick to apply some dithering instead of just simply
+thresholding the images to bring it back to two colours. For some individual
+frames, this looks much better. But in motion it looked a bit messy, with
+"frayed" edges, and it compressed worse. See for yourself:
+
+![The video with Floyd-Steinberg dithering applied](./pictures/dithering.gif)
+
 ### On codecs
