@@ -11,6 +11,7 @@
 
 : main
   clear
+  hires
   :alias unpack-hi current-frame-hi
   :alias unpack-lo current-frame-lo
   :unpack long bad_apple_001

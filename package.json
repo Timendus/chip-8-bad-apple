@@ -1,7 +1,7 @@
 {
   "name": "bad-apple",
   "scripts": {
-    "scale": "magick mogrify -path ./frames/scaled/ -resize 48x32^ -gravity center -extent 48x32 -threshold 50% -quality 100 ./frames/original/*.png",
+    "scale": "magick mogrify -path ./frames/scaled/ -resize 96x64^ -gravity center -extent 96x64 -threshold 50% -quality 100 ./frames/original/*.png",
     "encode": "./encoder/index.js",
     "build": "octopus player/index.8o bin/bad-apple.8o && cat bin/bad-apple.8o | pbcopy",
     "build-all": "npm run build && npm run build-binary && npm run build-html",

@@ -1,9 +1,9 @@
 :alias X v2
 :alias Y v3
 
-:const HORIZ_MARGIN 8
-:const OUTPUT_WIDTH 48
-:const OUTPUT_HEIGHT 32
+:const HORIZ_MARGIN 16
+:const OUTPUT_WIDTH 96
+:const OUTPUT_HEIGHT 64
 :calc HORIZ_END { HORIZ_MARGIN + OUTPUT_WIDTH }
 
 # XOR the data at i directly to the screen

@@ -5,10 +5,10 @@ const PNG = require('pngjs').PNG;
 const rleEncode = require('./rle.js');
 
 const FRAME_START   = 1;
-const FRAME_END     = 1450;
+const FRAME_END     = 450;
 const FRAME_STEP    = 2;
-const TARGET_WIDTH  = 48;   // Should be divisible by 8
-const TARGET_HEIGHT = 32;
+const TARGET_WIDTH  = 96;   // Should be divisible by 8
+const TARGET_HEIGHT = 64;
 
 const movie = {}
 
