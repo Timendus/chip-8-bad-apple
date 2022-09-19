@@ -147,7 +147,8 @@ especially at half the frame rate.
 
 The end result after all of this cleanup:
 
-![The video in the correct aspect ratio, with the proper frame rate and no more weird frame 61](./pictures/after-cleanup.gif)
+![The video in the correct aspect ratio, with the proper frame rate and no more
+weird frame 61](./pictures/after-cleanup.gif)
 
 I also tried to tell ImageMagick to apply some dithering instead of just simply
 thresholding the images to bring it back to two colours. For some individual
@@ -156,4 +157,59 @@ frames, this looks much better. But in motion it looked a bit messy, with
 
 ![The video with Floyd-Steinberg dithering applied](./pictures/dithering.gif)
 
-### On codecs
+### Adding music
+
+To get a better understanding of the amount of space I needed to reserve for the
+music, I added the standalone player from Kouzeru's excellent XO-Tracker to the
+project, together with one of his songs from last year. I tried to be fairly
+picky, throwing out anything that I thought wasn't strictly necessary, to leave
+as much space as possible for video frames.
+
+Although it's a bit of a mindfuck to see the Bad Apple video but hear an
+unrelated song, it's nice to see all the bits and pieces come together. The
+whole thing now needs to run at "Ludicrous Speed" in Octo, but that's okay, it's
+not trying to be subtle 😄
+
+All in all, this was a fairly simple and painless part of this project!
+
+### Video compression
+
+Alright, time to get to squeezing bytes!
+
+This was the current state of affairs, when it comes to what lives where in
+memory and how big everything is:
+
+|  Address space  |  Size | Type | Contents                |
+|-----------------|-------|------|-------------------------|
+| `$0000 - $0200` |   512 |  --  | (_Interpreter code_)    |
+| `$0200 - $02B3` |   179 | Code | Main loop               |
+| `$02B3 - $04AA` |   503 | Code | XO-Tracker              |
+| `$04AA - $050E` |   100 | Code | Image decoder           |
+| `$050E - $0CCA` |  1980 | Data | Music                   |
+| `$0CCA - $FE04` | 61754 | Data | Images                  |
+| `$FE04 - $FFFF` |   507 |  --  | Free space              |
+
+So after adding the music we had a little over 60KB (62261 bytes) of space left
+to fit the image data. The Bad Apple song could turn out to be a bit larger or a
+bit smaller than this song, but we'll cross that bridge when we get there. For
+now at least we have a target to aim for!
+
+What I had done up to this point was just apply my existing RLE encoder to a
+diff of the images. I had three additional ideas to test out:
+
+1. Throwing out frames that change only a pixel or two, merging those into other
+   frames that we then show for a longer duration (lossy in the temporal
+   dimension)
+2. Encoding each frame with a bounding box of the part of the screen that needs
+   to be updated; that way we don't have to store lots of run lenghts with
+   zeroes, and we would probably get smaller diff sizes (lossless)
+3. Generating a shared set of 8x8 tiles from the frames and encode each frame as
+   a series of pointers to tiles with coordinates of where to put them (lossy in
+   the spacial dimension)
+
+The first experiment was the easiest to do, and resulted in a very marginal
+improvement of a couple of tenths of a percent. Driving up the number of pixels
+considered "no change" would give better results, but at the cost of the video
+becoming very stuttery. So that seemed like a minor improvement, at best. To
+keep the illusion of fluid motion, it may not be a very good idea to accept too
+much lossyness in the temporal dimension.
