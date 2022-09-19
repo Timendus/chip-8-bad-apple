@@ -10,8 +10,6 @@
 #+-----------------------+-----------------------+-----------------------+-----------------------+
 #| Song timeline         | Song loop point       | Song properties       | Song sequence data    |
 #+-----------------------+-----------------------+-----------------------+-----------------------+
- :                                      song-BananaFox-Theme                                     #
- |>  seqTime-BananaFox   |>  seqLoop-BananaFox   |>  seqProp-BananaFox   |>  seqData-BananaFox   #
  :                                     song-BananaFox-OverWorld                                  #
  |>  seqTime-BananaFox2  |>  seqLoop-BananaFox2  |>  seqProp-BananaFox2  |>  seqData-BananaFox2  #
 
@@ -21,107 +19,6 @@
 #   must be in order: seqTime, seqLoop, then last seqProp.
 
 #   If song has no loop, it has to loop within an empty frame
-
-: seqTime-BananaFox # Song timeline of frames
-  0
-  1    2    3    4    5    6    7    8
-: seqLoop-BananaFox # The song loop point
-  9    10   11   12   13   14   15   16
-	17   18   19   20   21   22   23   24
-	25   26   27   28   29   30   31   32
-	33   34   35   36   37   38   39   40
-	41   42   43   44   45   46   47   48
-	49   50   51   52   53   54   55   56
-	57   58   59   60   61   62   63   64
-	65   66
-
-: seqProp-BananaFox # Song properties
-#  _______ _______ _______ _______
-# |Speed A|Speed B|Speed C|Speed D|
-   9       5       4       3
-#  __________________ ______________ _____________________
-# |Default tick rate |Rows per Frame|Rows per quarter note|
-   60                 8              4
-
-: seqData-BananaFox  # 16 bytes per frame; with 66 frames, 1056 bytes in total
-# Key : Corresponding musical key note, ranged from G$1 to B-6
-# D : Tone duty type, - for silence, A for 12.5% duty, B for 25% duty, and C for 50% duty
-# O : Ornament, . for monotone, J for major triad, I for minor triad, D for diminished triad
-# S : Sample type, . for tone only, H tone with hat, K tone with kick, S tone with snare
-# G : Groove select, which selects ticks per row from the corresponding table of Speeds above
-#     0 uses Speed A, 1 uses Speed B, 2 uses Speed C, and 3 uses Speed D.
-# __________ __________ __________ __________ __________ __________ __________ __________ _______
-#| Row 0    | Row 1    | Row 2    | Row 3    | Row 4    | Row 5    | Row 6    | Row 7    | Frame |
-#|Key DOS G |Key DOS G |Key DOS G |Key DOS G |Key DOS G |Key DOS G |Key DOS G |Key DOS G |   #   |
-  C-2 B.. 0  ... -.. 0  C-3 B.. 0  ... -.. 0  C-4 -.. 0  ... -.. 0  C-3 B.. 0  G-3 U-0 0  #     0
-  F-3 B.K 0  ... -.. 0  F-3 B.K 0  ... -.. 0  F-3 B.S 0  ... -.. 0  F-3 B.K 0  F-3 B.S 0  #     1
-  ... -.. 0  F-3 B.S 0  F-3 B.K 0  F-3 CJ. 0  F-3 B.S 0  ... -.. 0  E-3 B.H 0  F-3 B.. 0  #     2
-  E-3 B.K 0  ... -.. 0  E-3 B.K 0  ... -.. 0  E-3 B.S 0  ... -.. 0  E-3 B.K 0  E-3 B.S 0  #     3
-  ... -.. 0  E-3 B.S 0  E-3 B.K 0  C-3 BJ. 0  E-3 B.S 0  ... -.. 0  D-3 B.H 0  C-3 B.. 0  #     4
-  C-3 B.K 0  D-3 B.. 0  E-3 B.K 0  F-3 B.. 0  G-3 B.S 0  ... -.. 0  G-3 B.K 0  G-3 B.S 0  #     5
-  ... -.. 0  G-3 B.S 0  G-3 B.K 0  G-3 CJ. 0  G-3 B.S 0  ... -.. 0  F-3 B.H 0  E-3 B.H 0  #     6
-  C-3 B.K 0  ... -.. 0  C-3 B.K 0  ... -.. 0  C-3 B.S 0  C-3 BJ. 0  C-3 B.K 0  C-3 B.S 0  #     7
-  ... -.. 0  C-3 U-A 0  ... -.. 0  ... -.. 0  G-3 B.S 0  C-4 CJ. 0  G-3 B.S 0  G-3 B.S 0  #     8
-  C-3 B.K 0  D-3 B.. 0  E-3 B.S 0  F-3 B.. 0  G-3 B.. 0  C-4 CJK 0  F-3 B.S 0  E-3 B.. 0  #     9
-  C-3 B.K 0  C-3 U-A 0  G-3 B.S 0  E-3 B.K 0  F-3 B.. 0  C-4 CJK 0  E-3 B.S 0  D-3 B.. 0  #    10
-  C-3 B.K 0  C-3 U-A 0  E-3 B.S 0  F-3 B.. 0  G-3 B.. 0  C-4 CJK 0  F-3 B.S 0  E-3 B.. 0  #    11
-  C-3 B.K 0  C-3 U-A 0  G-3 B.S 0  A-3 B.K 0  F-3 B.. 0  C-4 CJK 0  E-3 B.S 0  D-3 B.S 0  #    12
-  C-3 B.K 0  G-2 U-1 0  E-3 B.S 0  F-3 B.. 0  G-3 B.. 0  C-4 CJK 0  F-3 B.S 0  E-3 B.. 0  #    13
-  C-3 B.K 0  C-3 U-A 0  G-3 B.S 0  E-3 B.K 0  F-3 B.. 0  G-3 B.K 0  F-3 B.S 0  E-3 B.K 0  #    14
-  C-3 B.K 0  C-3 U-A 0  E-3 B.S 0  F-3 B.. 0  G-3 B.. 0  C-4 CJK 0  F-3 B.S 0  E-3 B.. 0  #    15
-  G-3 B.K 0  C-4 CJ. 0  F-3 B.S 0  E-3 B.K 0  G-3 B.. 0  C-4 CJS 0  A-3 B.S 0  G-3 B.S 0  #    16
-  C-4 B.K 1  C-3 C.. 2  C-4 B.H 1  ... -.. 2  E-4 B.S 1  ... -.. 2  F-4 B.H 1  G-3 C.. 2  #    17
-  G-4 B.H 1  ... -.. 2  C-4 AJK 1  ... -.. 2  F-4 B.S 1  A-2 C.. 2  E-4 B.H 1  ... -.. 2  #    18
-  C-4 B.K 1  C-3 C.. 2  C-4 B.H 1  ... -.. 2  G-4 B.S 1  ... -.. 2  E-4 B.K 1  F-3 C.. 2  #    19
-  F-4 B.H 1  F-4 U-A 2  C-4 AJK 1  ... -.. 2  E-4 B.S 1  C-3 C.. 2  D-4 B.H 1  ... -.. 2  #    20
-  C-4 B.K 1  C-3 C.. 2  C-4 B.H 1  ... -.. 2  E-4 B.S 1  ... -.. 2  F-4 B.H 1  G-3 C.. 2  #    21
-  G-4 B.H 1  ... -.. 2  C-4 AJK 1  ... -.. 2  G-4 C.S 1  C-5 U-2 2  C-5 C.H 1  ... -.. 2  #    22
-  B-4 C.K 1  G-3 C.. 2  B-4 C.H 1  ... -.. 2  C-5 C.S 1  ... -.. 2  G-4 C.K 1  A-3 C.. 2  #    23
-  G-4 C.S 1  G-4 U-B 2  F-4 C.K 1  ... -.. 2  A-4 C.S 1  ... -.. 2  G-4 C.S 1  C-4 U-3 2  #    24
-  C-4 B.K 1  C-3 C.. 2  C-4 B.H 1  ... -.. 2  E-4 B.S 1  ... -.. 2  F-4 B.H 1  G-3 C.. 2  #    25
-  G-4 B.H 1  ... -.. 2  C-4 AJK 1  ... -.. 2  F-4 B.S 1  A-2 C.. 2  E-4 B.H 1  ... -.. 2  #    26
-  C-4 B.K 1  C-3 C.. 2  C-4 B.H 1  ... -.. 2  G-4 B.S 1  ... -.. 2  E-4 B.K 1  F-3 C.. 2  #    27
-  F-4 B.H 1  ... -.. 2  G-4 B.K 1  ... -.. 2  F-4 B.S 1  C-3 C.. 2  E-4 B.H 1  ... -.. 2  #    28
-  C-4 B.K 1  C-3 C.. 2  C-4 B.H 1  ... -.. 2  E-4 B.S 1  ... -.. 2  F-4 B.H 1  G-3 C.. 2  #    29
-  G-4 B.H 1  ... -.. 2  C-4 AJK 1  ... -.. 2  G-4 B.S 1  C-5 U-0 2  C-5 B.H 1  C-5 U-A 2  #    30
-  D-5 B.S 1  ... -.. 2  D-5 B.H 1  D-5 U-A 2  C-5 B.S 1  ... -.. 2  B-4 B.S 1  ... -.. 2  #    31
-  B-4 B.H 1  B-4 U-A 2  B-4 B.S 1  G-4 U-1 2  G-4 B.S 1  ... -.. 2  G-4 B.S 1  G-4 U-A 2  #    32
-  C-5 A.S 0  B-4 B.. 0  C-5 A.K 0  G-4 A.S 0  C-4 BJ. 0  E-4 B.K 0  F-4 B.S 0  F-4 U-A 0  #    33
-  ... -.. 0  E-4 B.S 0  F-4 C.K 0  E-4 B.K 0  F-4 B.S 0  G-4 C.K 0  F-4 B.S 0  E-4 B.S 0  #    34
-  F-4 B.K 1  E-3 C.. 2  E-4 B.H 1  C-4 BJ. 2  F-4 B.S 1  ... -.. 2  C-4 B.K 1  E-3 C.. 2  #    35
-  C-4 B.H 1  ... -.. 2  C-4 B.K 1  C-4 U-A 2  G-4 B.S 1  ... -.. 2  F-4 B.H 1  ... -.. 2  #    36
-  A-4 B.K 1  F-3 C.. 2  G-4 B.H 1  F-4 CJ. 2  G-4 B.S 1  G-4 U-A 2  G-4 B.K 1  F-3 C.. 2  #    37
-  F-4 B.H 1  F-4 B.. 2  E-4 B.K 1  E-4 U-A 2  F-4 B.S 1  ... -.. 2  E-4 B.H 1  E-4 U-A 2  #    38
-  F-4 B.K 1  G-3 C.. 2  E-4 B.H 1  C-4 BJ. 2  F-4 B.S 1  ... -.. 2  G-4 B.K 1  G-3 C.. 2  #    39
-  G-4 B.H 1  G-4 U-A 2  B-4 B.K 1  C-5 B.. 2  B-4 B.S 1  ... -.. 2  C-5 B.H 1  ... -.. 2  #    40
-  G-4 B.K 1  F-3 C.. 2  F-4 B.H 1  F-4 CJ. 2  E-4 B.S 1  ... -.. 2  F-4 B.K 1  F-3 C.. 2  #    41
-  G-4 B.H 1  ... -.. 2  G-4 B.K 1  ... -.. 2  G-4 B.S 1  G-4 U-A 2  G-4 B.S 1  G-4 U-A 2  #    42
-  F-4 B.K 1  E-3 C.. 2  E-4 B.H 1  C-4 BJ. 2  F-4 B.S 1  ... -.. 2  E-4 B.K 1  E-3 C.. 2  #    43
-  F-4 B.H 1  ... -.. 2  E-4 B.K 1  E-4 U-A 2  F-4 B.S 1  ... -.. 2  E-4 B.H 1  E-4 U-A 2  #    44
-  E-4 B.K 1  F-3 C.. 2  D-4 B.H 1  F-4 CJ. 2  E-4 B.S 1  ... -.. 2  D-4 B.K 1  F-3 C.. 2  #    45
-  E-4 B.H 1  ... -.. 2  D-4 B.K 1  D-4 U-A 2  E-4 B.S 1  ... -.. 2  F-4 B.H 1  ... -.. 2  #    46
-  G-4 B.K 1  G-3 C.. 2  F-4 B.H 1  G-4 CJ. 2  G-4 B.S 1  ... -.. 2  F-4 B.K 1  G-3 C.. 2  #    47
-  G-4 B.H 1  ... -.. 2  F-4 B.K 1  F-4 U-A 2  G-4 B.S 1  ... -.. 2  F-4 B.H 1  ... -.. 2  #    48
-  G-4 B.K 1  G-3 C.. 2  F-4 B.H 1  G-4 CJ. 2  G-4 B.S 1  ... -.. 2  F-4 B.K 1  G-3 C.. 2  #    49
-  G-4 B.H 1  ... -.. 2  A-4 B.K 1  ... -.. 2  E-4 B.S 1  ... -.. 2  F-4 B.S 1  ... -.. 2  #    50
-  C-4 A.K 1  E-3 C.. 2  B-3 A.H 1  C-4 BJ. 2  C-4 A.S 1  ... -.. 2  G-4 A.K 1  E-3 C.. 2  #    51
-  G-4 A.H 1  G-4 U-9 2  G-4 A.K 1  G-4 U-9 2  F-4 A.S 1  E-3 C.. 2  E-4 A.H 1  ... -.. 2  #    52
-  F-4 A.K 1  F-3 C.. 2  G-4 A.H 1  F-4 CJ. 2  G-4 A.S 1  G-4 U-9 2  G-4 A.K 1  F-3 C.. 2  #    53
-  C-5 A.H 1  ... -.. 2  B-4 A.K 1  ... -.. 2  C-5 A.S 1  F-3 C.. 2  B-4 A.H 1  ... -.. 2  #    54
-  D-5 A.K 1  G-3 C.. 2  D-5 A.H 1  G-4 CJ. 2  C-5 A.S 1  C-5 U-9 2  B-4 A.K 1  G-3 C.. 2  #    55
-  G-4 A.H 1  ... -.. 2  G-4 A.K 1  G-4 U-9 2  F-4 A.S 1  G-3 C.. 2  F-4 A.H 1  ... -.. 2  #    56
-  E-4 A.K 1  F-3 C.. 2  E-4 A.H 1  F-4 A.. 2  F-4 -.S 1  F-4 A.. 2  G-4 A.K 1  F-3 C.. 2  #    57
-  C-4 A.H 1  ... -.. 2  C-4 A.K 1  ... -.. 2  G-4 A.S 1  F-3 C.. 2  G-4 A.S 1  G-4 U-9 2  #    58
-  F-4 B.K 1  F-3 C.. 2  E-4 B.H 1  F-4 CJ. 2  F-4 B.S 1  ... -.. 2  E-4 B.K 1  F-3 C.. 2  #    59
-  F-4 B.H 1  ... -.. 2  E-4 B.K 1  ... -.. 2  F-4 B.S 1  F-3 C.. 2  E-4 B.H 1  ... -.. 2  #    60
-  E-4 B.K 1  E-3 C.. 2  D-4 B.H 1  E-4 CI. 2  E-4 B.S 1  ... -.. 2  D-4 B.K 1  E-3 C.. 2  #    61
-  E-4 B.H 1  ... -.. 2  D-4 B.K 1  ... -.. 2  E-4 B.S 1  E-3 C.. 2  F-4 B.S 1  ... -.. 2  #    62
-  G-4 B.K 1  G-3 C.. 2  F-4 B.H 1  G-4 CJ. 2  G-4 B.S 1  ... -.. 2  F-4 B.K 1  G-3 C.. 2  #    63
-  G-4 B.H 1  ... -.. 2  A-4 B.K 1  ... -.. 2  G-4 B.S 1  G-3 C.. 2  F-4 B.H 1  ... -.. 2  #    64
-  C-4 B.S 1  C-3 C.. 2  C-4 B.H 1  C-4 CJ. 2  C-4 B.H 1  ... -.. 2  B-3 B.S 1  B-2 C.. 2  #    65
-  B-3 B.H 1  ... -.. 2  B-3 B.S 1  ... -.. 2  B-3 B.S 1  G-3 U-1 2  G-3 B.S 1  ... -.. 2  #    66
-
-
 
 : seqTime-BananaFox2 # Song timeline of frames
    0   1   0   2  # Intro

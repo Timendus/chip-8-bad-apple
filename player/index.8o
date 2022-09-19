@@ -17,7 +17,7 @@
 
 : main
   clear
-  loadSong 1 32
+  loadSong 0 0
   :alias unpack-hi current-frame-hi
   :alias unpack-lo current-frame-lo
   :unpack long bad_apple_001
@@ -117,6 +117,8 @@
   if current-frame-lo != v3 then jump main-loop
 
   # We're done! 🎉
+  vF := 0
+  buzzer := vF
   loop
     vF := 4
     if vF key then jump main  # Restart the video
@@ -131,11 +133,11 @@
 : safe-storage
   0 0 0 0 0
 
-#include "decoder.8o"
-#include "frames.8o"
 #include "music/player.8o"
 #include "music/song.8o"
 
-#data
+#include "decoder.8o"
+#include "frames.8o"
 
-: the-end
+#data
+: the-end  # So we know when we're out of frames

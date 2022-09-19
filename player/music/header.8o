@@ -17,7 +17,57 @@
 # | Your song list goes here
 # +-----------------------------------
   |> song-BananaFox-OverWorld  # song 0
-  |> song-BananaFox-Theme      # song 1
 
 # +-----------------------------------
 }
+
+#+--------------------------------------------------------
+#| MISCELLANEOUS THINGS,
+#| In order to make easy of music making, some inputs are mapped here.
+#+--------------------------------------------------------
+
+# Note key name mappings
+  :macro ... { 0   } # blank/continue
+  :macro --- { 1   } # mute
+  :macro === { 2   } # jump next
+
+# Precise pitch table according to corresponding standard note key
+  :macro G$1 { 3   } :macro C-3 { 67  } :macro E-4 { 131 } :macro G$5 { 195 }
+  :macro A-1 { 7   } :macro C$3 { 71  } :macro F-4 { 135 } :macro A-5 { 199 }
+  :macro A$1 { 11  } :macro D-3 { 75  } :macro F$4 { 139 } :macro A$5 { 203 }
+  :macro B-1 { 15  } :macro D$3 { 79  } :macro G-4 { 143 } :macro B-5 { 207 }
+  :macro C-2 { 19  } :macro E-3 { 83  } :macro G$4 { 147 } :macro C-6 { 211 }
+  :macro C$2 { 23  } :macro F-3 { 87  } :macro A-4 { 151 } :macro C$6 { 215 }
+  :macro D-2 { 27  } :macro F$3 { 91  } :macro A$4 { 155 } :macro D-6 { 219 }
+  :macro D$2 { 31  } :macro G-3 { 95  } :macro B-4 { 159 } :macro D$6 { 223 }
+  :macro E-2 { 34  } :macro G$3 { 99  } :macro C-5 { 163 } :macro E-6 { 227 }
+  :macro F-2 { 39  } :macro A-3 { 103 } :macro C$5 { 167 } :macro F-6 { 231 }
+  :macro F$2 { 43  } :macro A$3 { 107 } :macro D-5 { 171 } :macro F$6 { 235 }
+  :macro G-2 { 47  } :macro B-3 { 111 } :macro D$5 { 175 } :macro G-6 { 239 }
+  :macro G$2 { 51  } :macro C-4 { 115 } :macro E-5 { 179 } :macro G$6 { 243 }
+  :macro A-2 { 55  } :macro C$4 { 119 } :macro F-5 { 183 } :macro A-6 { 247 }
+  :macro A$2 { 59  } :macro D-4 { 123 } :macro F$5 { 187 } :macro A$6 { 251 }
+  :macro B-2 { 63  } :macro D$4 { 127 } :macro G-5 { 191 } :macro B-6 { 255 }
+
+# Predefined sample keys
+  :macro defS z n { :macro z l { :byte { ( l & 3 ) | ( n << 2 ) } } }
+  defS -.. 0x0   defS A.. 0x10   defS B.. 0x20   defS C.. 0x30
+  defS -.H 0x1   defS A.H 0x11   defS B.H 0x21   defS C.H 0x31
+  defS -.K 0x2   defS A.K 0x12   defS B.K 0x22   defS C.K 0x32
+  defS -.S 0x3   defS A.S 0x13   defS B.S 0x23   defS C.S 0x33
+  defS -J. 0x4   defS AJ. 0x14   defS BJ. 0x24   defS CJ. 0x34
+  defS -JH 0x5   defS AJH 0x15   defS BJH 0x25   defS CJH 0x35
+  defS -JK 0x6   defS AJK 0x16   defS BJK 0x26   defS CJK 0x36
+  defS -JS 0x7   defS AJS 0x17   defS BJS 0x27   defS CJS 0x37
+  defS -I. 0x8   defS AI. 0x18   defS BI. 0x28   defS CI. 0x38
+  defS -IH 0x9   defS AIH 0x19   defS BIH 0x29   defS CIH 0x39
+  defS -IK 0xA   defS AIK 0x1A   defS BIK 0x2A   defS CIK 0x3A
+  defS -IS 0xB   defS AIS 0x1B   defS BIS 0x2B   defS CIS 0x3B
+  defS -D. 0xC   defS AD. 0x1C   defS BD. 0x2C   defS CD. 0x3C
+  defS -DH 0xD   defS ADH 0x1D   defS BDH 0x2D   defS CDH 0x3D
+  defS -DK 0xE   defS ADK 0x1E   defS BDK 0x2E   defS CDK 0x3E
+  defS -DS 0xF   defS ADS 0x1F   defS BDS 0x2F   defS CDS 0x3F
+# User defined sample keys
+	defS U-0 4     defS U-1 5      defS U-2 6      defS U-3 7
+  defS U-4 8     defS U-5 9      defS U-6 10     defS U-7 11
+  defS U-8 12    defS U-9 13     defS U-A 14     defS U-B 15
