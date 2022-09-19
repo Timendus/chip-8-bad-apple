@@ -1,0 +1,23 @@
+# +-----------------------------------------
+# | XO-Tracker v0.1.1 Clean Version
+# +-----------------------------------------
+# Code by Kouzeru, cut into pieces by Timendus 😄
+
+:macro loadSong m delayStart {
+  v0 := m  songLoadAddresses
+	:calc z { 255 - delayStart }
+	v0 := z  i := tickStates  save v0
+}
+
+:macro |> k { :pointer k }
+:macro buzzerpitch vX {  :byte  { 0xF0 + vX }  0x3A  }
+
+:macro mySongList {
+# +-----------------------------------
+# | Your song list goes here
+# +-----------------------------------
+  |> song-BananaFox-OverWorld  # song 0
+  |> song-BananaFox-Theme      # song 1
+
+# +-----------------------------------
+}

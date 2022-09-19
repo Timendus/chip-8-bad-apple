@@ -1,5 +1,11 @@
 # Bad Apple for XO-CHIP, 2022
+# Written for OctoJam 9
+#  * Video encoding and decoding - Timendus
+#  * Music arrangement and coding - Kouzeru
 
+#include "music/header.8o"
+
+:alias ticks vA
 :alias current-frame-hi vB
 :alias current-frame-lo vC
 :alias playing vD
@@ -11,6 +17,7 @@
 
 : main
   clear
+  loadSong 1 32
   :alias unpack-hi current-frame-hi
   :alias unpack-lo current-frame-lo
   :unpack long bad_apple_001
@@ -19,32 +26,51 @@
   delay := frames-per-image # Reset timing
 
 : main-loop
-  # This loop syncs to 7,5FPS and does the high-frequency stuff
+  # This loop syncs to 15FPS and does the high-frequency stuff
+  ticks := 4 # 4/60th = 1/15th of a second = 15 FPS
   loop
-    # Handle key input
-    vF := 6
-    if vF key begin
-      v0 := PLAYING
-      playing ^= v0 # Play / pause the video
-      loop if vF key then again
-    end
-    vF := 9
-    if vF key begin
-      playing := STEPPING
-      loop if vF key then again
-    end
-    vF := 4
-    if vF key then jump main  # Restart the video
+    loop
+      # Handle key input
+      vF := 6
+      if vF key begin
+        v0 := PLAYING
+        playing ^= v0 # Play / pause the video
+        loop if vF key then again
+      end
+      vF := 9
+      if vF key begin
+        playing := STEPPING
+        loop if vF key then again
+      end
+      vF := 4
+      if vF key then jump main  # Restart the video
 
-    # Sync to 7,5FPS
-    vF := delay
-    if vF != 0 then
+      # Are we playing?
+      if playing == STOPPED begin
+        vF := 0
+        buzzer := vF
+        jump main-loop
+      end
+
+      # Wait for one display refresh
+      vF := delay
+      if vF != 0 then
+    again
+    vF := 1
+    delay := vF
+
+    # Play the music, which destroys every register under the sun
+    i := safe-storage  save vA - vE
+    songPlayNextTick
+    i := safe-storage  load vA - vE
+
+    ticks -= 1
+    if ticks != 0 then
   again
-  vF := 4
-  delay := vF
 
-  # Are we playing?
-  if playing == STOPPED then jump main-loop
+  # From here on down we know we're running this code at 15FPS
+
+  # If we're stepping, stop after this frame
   if playing == STEPPING then playing := STOPPED
 
   # Do we have any duplicate frames left to play?
@@ -102,8 +128,13 @@
   current-frame-hi += vF
   return
 
+: safe-storage
+  0 0 0 0 0
+
 #include "decoder.8o"
 #include "frames.8o"
+#include "music/player.8o"
+#include "music/song.8o"
 
 #data
 
