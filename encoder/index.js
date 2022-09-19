@@ -10,6 +10,8 @@ const FRAME_STEP    = 2;
 const TARGET_WIDTH  = 48;   // Should be divisible by 8
 const TARGET_HEIGHT = 32;
 
+const NUM_PIXELS_CONSIDERED_NO_CHANGE = 0;
+
 const movie = {}
 
 for ( let i = FRAME_START; i <= FRAME_END; i+=FRAME_STEP ) {
@@ -24,20 +26,23 @@ for ( let i = FRAME_START; i <= FRAME_END; i+=FRAME_STEP ) {
   };
 }
 
+const nibbleLookup = [0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4];
 let prev = false;
 for ( const frame of Object.keys(movie) ) {
   movie[frame].RLE = rleEncode(movie[frame].input);
-  movie[frame].output = movie[frame].input.length > movie[frame].RLE.length ? 'RLE' : 'input';
+  movie[frame].outputType = movie[frame].input.length > movie[frame].RLE.length ? 'RLE' : 'input';
   if ( frame > FRAME_START ) {
     movie[frame].diff = movie[frame].input.map((v, i) => v ^ movie[prev].input[i]);
     movie[frame].diffRLE = rleEncode(movie[frame].diff);
-    movie[frame].duplicate = movie[frame].diff.every(v => v == 0);
-    if ( movie[frame].diffRLE.length < movie[frame][movie[frame].output].length )
-      movie[frame].output = 'diffRLE';
+    movie[frame].numChangedPixels = movie[frame].diff.reduce((a,v) => v == 0 ? a : a + (nibbleLookup[v >> 4] + nibbleLookup[v & 0xF]), 0);
+    movie[frame].duplicate = movie[frame].numChangedPixels <= NUM_PIXELS_CONSIDERED_NO_CHANGE;
+    if ( movie[frame].diffRLE.length < movie[frame][movie[frame].outputType].length )
+      movie[frame].outputType = 'diffRLE';
   }
+  movie[frame].output = movie[frame][movie[frame].outputType];
   if ( prev && movie[frame].duplicate ) {
     movie[prev].frames++;
-    if ( movie[prev].frames > 63 ) console.error("Can't merge so many frames :/");
+    if ( movie[prev].frames > 31 ) console.error("Can't merge so many frames :/");
   } else {
     prev = frame;
   }
@@ -50,11 +55,11 @@ fs.writeFileSync('player/frames.8o',
   Object.values(movie)
         .filter(v => !v.duplicate)
         .map(v => {
-          const clearBeforeDraw = v.output == 'RLE' || v.output == 'input';
-          const rleEncoded = v.output != 'input';
-          return `: bad_apple_${v.id} # ${v.output}\n` +
+          const clearBeforeDraw = v.outputType == 'RLE' || v.outputType == 'input';
+          const rleEncoded = v.outputType != 'input';
+          return `: bad_apple_${v.id} # ${v.outputType}\n` +
             '  0x' + ((clearBeforeDraw ? 128 : 0) + (rleEncoded ? 64 : 0) + (v.frames - 1)).toString(16).padStart(2, '0') + '\n' +
-            formatForOcto(v[v.output])
+            formatForOcto(v.output)
         })
         .join('\n')
 );
@@ -62,9 +67,9 @@ fs.writeFileSync('player/frames.8o',
 console.log(`\nRENDERED ${Object.keys(movie).length} FRAMES\n`)
 
 const input = Object.values(movie).reduce((a, v) => a + v.input.length, 0);
-const rle = Object.values(movie).reduce((a, v) => a + v.RLE.length, 0);
-const diffrle = Object.values(movie).reduce((a, v) => a + (v.diffRLE ? v.diffRLE.length : v.RLE.length), 0);
-const output = Object.values(movie).reduce((a, v) => a + v[v.output].length, 0);
+const rle = Object.values(movie).filter(v => !v.duplicate).reduce((a, v) => a + v.RLE.length, 0);
+const diffrle = Object.values(movie).filter(v => !v.duplicate).reduce((a, v) => a + (v.diffRLE ? v.diffRLE.length : v.RLE.length), 0);
+const output = Object.values(movie).filter(v => !v.duplicate).reduce((a, v) => a + v[v.outputType].length, 0);
 console.log(`${input} bytes uncompressed`);
 console.log(`${rle} bytes RLE encoded (${Math.round((input-rle)/input*1000)/10}% compression rate)`);
 console.log(`${diffrle} bytes RLE encoded over the diff (${Math.round((input-diffrle)/input*1000)/10}% compression rate)`);
