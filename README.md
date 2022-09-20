@@ -157,7 +157,7 @@ frames, this looks much better. But in motion it looked a bit messy, with
 
 ![The video with Floyd-Steinberg dithering applied](./pictures/dithering.gif)
 
-### Adding music
+### Some tunes 🎶
 
 To get a better understanding of the amount of space I needed to reserve for the
 music, I added the standalone player from Kouzeru's excellent XO-Tracker to the
@@ -172,7 +172,7 @@ not trying to be subtle 😄
 
 All in all, this was a fairly simple and painless part of this project!
 
-### Video compression
+### Ready, set, go!
 
 Alright, time to get to squeezing bytes!
 
@@ -191,28 +191,36 @@ memory and how big everything is:
 
 So after adding the music we had a little over 60KB (62261 bytes) of space left
 to fit the image data. The Bad Apple song could turn out to be a bit larger or a
-bit smaller than this song, but we'll cross that bridge when we get there. For
+bit smaller than this song, but we'd cross that bridge when we get there. For
 now at least we have a target to aim for!
+
+### Testing ideas
 
 What I had done up to this point was just apply my existing RLE encoder to a
 diff of the images. I had three additional ideas to test out:
 
 1. Throwing out frames that change only a pixel or two, merging those into other
    frames that we then show for a longer duration (lossy in the temporal
-   dimension)
+   domain)
 2. Encoding each frame with a bounding box of the part of the screen that needs
    to be updated; that way we don't have to store lots of run lenghts with
    zeroes, and we would probably get smaller diff sizes (lossless)
 3. Generating a shared set of 8x8 tiles from the frames and encode each frame as
    a series of pointers to tiles with coordinates of where to put them (lossy in
-   the spacial dimension)
+   the spacial domain)
+
+There are also a couple of ideas for lossless encodings that I was not (yet)
+willing to explore. Huffman coding can probably do better than what we have now,
+but I didn't really feel like implementing Huffman trees in CHIP-8. Run length
+encoding per pixel may also be better than per byte, but that's going to be
+pretty slow and annoying.
 
 The first experiment was the easiest to do, and resulted in a very marginal
 improvement of a couple of tenths of a percent. Driving up the number of pixels
 considered "no change" would give better results, but at the cost of the video
 becoming very stuttery. So that seemed like a minor improvement, at best. To
 keep the illusion of fluid motion, it may not be a very good idea to accept too
-much lossyness in the temporal dimension.
+much lossyness in the temporal domain.
 
 The second idea definitely helped out a bit. Having a bounding box made 62% of
 the frames store smaller, but each only by a little bit. Implementing this
@@ -220,7 +228,7 @@ increased the compression rate for the entire video by about 6%, which is not
 bad!
 
 ```
-Compression methods used without bounding box:
+Encoding methods used (without bounding box):
 
   raw input:           23 times
   RLE encoded input:  627 times
@@ -231,7 +239,7 @@ Compression methods used without bounding box:
 ```
 
 ```
-Compression methods used with bounding box:
+Encoding methods used (with bounding box):
 
   raw input:                   9 times
   RLE encoded input:         287 times
@@ -256,3 +264,33 @@ least significant bits, as a number of pixels.
 
 We'll see how useful it's going to be when we get into the third idea, but for
 now I'm keeping this in!
+
+### The lossy algorithm
+
+I determined that we don't want loss in the temporal domain, and I thought that
+I couldn't push the lossless compression much further without getting
+ridiculous, so there's only one direction left to go. The next step to take is
+to sacrifice some quality in the spacial domain, in the form of a lossy video
+codec.
+
+The idea I had was simple enough on the CHIP-8 side: for each frame, we have a
+list of sprites to draw. Each entry in the list consists of X and Y coordinates
+and the index of the sprite to draw in some shared dictionary of sprites. So in
+our decoder, we just do something like:
+
+```octo
+  # i points to some encoded sprite in the list
+  load v2
+  i := dictionary
+  i += v2  i += v2  i += v2  i += v2  # Add 8 * v2 to i to get pointer to sprite
+  i += v2  i += v2  i += v2  i += v2
+  sprite v0 v1 8
+```
+
+This assumes we have a dictionary of max 256 entries and we are free to point to
+any X and Y coordinate.
+
+Now the trick that makes this lossy is that we don't try to have every possible
+sprite in our dictionary, but we filter the list based on some criteria to come
+to a subset that is "close enough" to draw the frames with. And herein lies the
+hard part.
