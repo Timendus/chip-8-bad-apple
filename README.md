@@ -86,9 +86,9 @@ version of the original and the run length encoded version of the diff, and
 outputs the smallest of the three.
 
 Using diffs, plus the unique nature of the video, as pointed out above, made
-this data compress much better than the 3D VIP'r Maze image data. This data
-easily compressed to an over 50% compression rate. Or in other words: it made
-the video less than half as small.
+this data compress much better than the 3D VIP'r Maze image data. The first part
+of the video easily compressed to an over 50% compression rate. Or in other
+words: it made the video less than half as small.
 
 But still, at this stage I could only store the video up to frame 1800 of the
 6562 total, while leaving us some space for the music. And that at a lower frame
@@ -213,3 +213,46 @@ considered "no change" would give better results, but at the cost of the video
 becoming very stuttery. So that seemed like a minor improvement, at best. To
 keep the illusion of fluid motion, it may not be a very good idea to accept too
 much lossyness in the temporal dimension.
+
+The second idea definitely helped out a bit. Having a bounding box made 62% of
+the frames store smaller, but each only by a little bit. Implementing this
+increased the compression rate for the entire video by about 6%, which is not
+bad!
+
+```
+Compression methods used without bounding box:
+
+  raw input:           23 times
+  RLE encoded input:  627 times
+  raw diff:             0 times
+  RLE encoded diff:  2522 times
+
+  Total size: 321.498 bytes (49% compression rate)
+```
+
+```
+Compression methods used with bounding box:
+
+  raw input:                   9 times
+  RLE encoded input:         287 times
+  bboxed input:              296 times
+  bboxed RLE encoded input:   59 times
+  raw diff:                    0 times
+  RLE encoded diff:          834 times
+  bboxed diff:               294 times
+  bboxed RLE encoded diff:  1393 times
+
+  Total size: 281.349 bytes (55.3% compression rate)
+```
+
+```
+Difference: 40.149 bytes
+```
+
+The algorithm adds two bytes to each frame that has a bounding box: one for the
+top left and one for the bottom right. I encoded the X coordinate in the three
+most significant bits, as a number of bytes, and the Y coordinate in the five
+least significant bits, as a number of pixels.
+
+We'll see how useful it's going to be when we get into the third idea, but for
+now I'm keeping this in!
