@@ -1,15 +1,13 @@
 #!/usr/bin/env node
 
 function assert(condition, message) {
-  if (!condition) {
-    console.error(`Assertion failed: ${message}`);
-    process.exit(1);
-  }
+  if (!condition) throw `Assertion failed: ${message}`;
 }
 
 const fs = require('fs');
 const PNG = require('pngjs').PNG;
 const rleEncode = require('./rle.js');
+const spriting = require('./spriting.js');
 
 const FRAME_START   = 1;
 const FRAME_END     = 1600;
@@ -18,21 +16,42 @@ const TARGET_WIDTH  = 48;   // Should be divisible by 8
 const TARGET_HEIGHT = 32;
 
 const NUM_PIXELS_CONSIDERED_NO_CHANGE = 0;
+const SPRITING_PIXEL_DIFFERENCE_ALLOWED = 3;
 
 const movie = {}
+
+/* Load in all the frame images */
 
 for ( let i = FRAME_START; i <= FRAME_END; i+=FRAME_STEP ) {
   const id = i < 1000 ? String(i).padStart(3, '0') : i;
   const file = `frames/scaled/bad_apple_${id}.png`;
   const fileData = fs.readFileSync(file);
   const png = PNG.sync.read(fileData);
+  const image = reduceTo1Bit(png.data);
   movie[i] = {
     id,
-    input: reduceTo1Bit(png.data),
+    input: image,
+    sprites: spriting.chopUp(image, TARGET_WIDTH, TARGET_HEIGHT),
     frames: 1,
     outputType: 'input'
   };
 }
+
+/* Determine the dictionary of unique sprites to use */
+
+const uniqueSprites = spriting.nonEmpty(
+  spriting.uniqueSprites(
+    Object.values(movie)
+          .map(f => f.sprites)
+          .flat()
+  )
+);
+const spriteSet = spriting.differingSprites(uniqueSprites, SPRITING_PIXEL_DIFFERENCE_ALLOWED*2);
+
+console.log(`Video has ${uniqueSprites.length} unique sprites`);
+console.log(`Video has ${spriteSet.length} sprites that differ more than ${SPRITING_PIXEL_DIFFERENCE_ALLOWED*2} pixels`);
+
+/* Do the second run over all the frames, encoding each in every format */
 
 const nibbleLookup = [0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4];
 let prev = false;
@@ -40,35 +59,25 @@ for ( const f of Object.keys(movie) ) {
   const frame = movie[f];
 
   frame.RLE = rleEncode(frame.input);
-  if ( frame.RLE.length < frame[frame.outputType].length ) frame.outputType = 'RLE';
-
   frame.boundingBox = getBoundingBox(frame.input);
   if ( frame.boundingBox.slice.length > 0 ) {
     frame.bbox = [...frame.boundingBox.encoded, ...frame.boundingBox.slice];
-    if ( frame.bbox.length < frame[frame.outputType].length ) frame.outputType = 'bbox';
-
     frame.bboxRLE = [...frame.boundingBox.encoded, ...rleEncode(frame.boundingBox.slice)];
-    if ( frame.bboxRLE.length < frame[frame.outputType].length ) frame.outputType = 'bboxRLE';
   }
 
   if ( f > FRAME_START ) {
     frame.diff = frame.input.map((v, i) => v ^ movie[prev].input[i]);
-    if ( frame.diff.length < frame[frame.outputType].length ) frame.outputType = 'diff';
-
     frame.diffRLE = rleEncode(frame.diff);
-    if ( frame.diffRLE.length < frame[frame.outputType].length ) frame.outputType = 'diffRLE';
-
+    // frame.sprited = spriting.encode(frame.diff, TARGET_WIDTH, TARGET_HEIGHT, spriteSet);
     frame.boundingBox = getBoundingBox(frame.diff);
     if ( frame.boundingBox.slice.length > 0 ) {
       frame.diffBbox = [...frame.boundingBox.encoded, ...frame.boundingBox.slice];
-      if ( frame.diffBbox.length < frame[frame.outputType].length ) frame.outputType = 'diffBbox';
-
       frame.diffBboxRLE = [...frame.boundingBox.encoded, ...rleEncode(frame.boundingBox.slice)];
-      if ( frame.diffBboxRLE.length < frame[frame.outputType].length ) frame.outputType = 'diffBboxRLE';
     }
 
     frame.numChangedPixels = frame.diff.reduce((a,v) =>
-      v == 0 ? a : a + (nibbleLookup[v >> 4] + nibbleLookup[v & 0xF]), 0
+      a + (nibbleLookup[v >> 4] + nibbleLookup[v & 0xF]),
+      0
     );
     frame.duplicate = frame.numChangedPixels <= NUM_PIXELS_CONSIDERED_NO_CHANGE;
 
@@ -78,11 +87,26 @@ for ( const f of Object.keys(movie) ) {
     }
   }
 
-  if (!frame.duplicate) prev = f;
+  // Find encoding method with the shortest output
+  [
+    'input',
+    'RLE',
+    'bbox',
+    'bboxRLE',
+    'diffRLE',
+    'diffBbox',
+    'diffBboxRLE',
+    'sprited',
+  ].forEach(method => {
+    if ( frame[method] && frame[method].length < frame[frame.outputType].length )
+      frame.outputType = method;
+  });
   frame.output = frame[frame.outputType];
+
+  if (!frame.duplicate) prev = f;
 }
 
-render(movie[Object.keys(movie).pop()].input);
+/* Output the resulting frame data to file */
 
 const clearScreen = 1 << 7;
 const decodeRLE   = 1 << 6;
@@ -93,10 +117,10 @@ const encodings = {
   'bbox':         clearScreen + useBbox,
   'bboxRLE':      clearScreen + useBbox + decodeRLE,
   'RLE':          clearScreen + decodeRLE,
-  'diff':         0,
   'diffRLE':      decodeRLE,
   'diffBbox':     useBbox,
-  'diffBboxRLE':  useBbox + decodeRLE
+  'diffBboxRLE':  useBbox + decodeRLE,
+  'sprited':      0
 };
 
 fs.writeFileSync('player/frames.8o',
@@ -114,23 +138,30 @@ fs.writeFileSync('player/frames.8o',
         .join('\n')
 );
 
+/* Show output and statistics */
+
+const frames = Object.values(movie).filter(v => !v.duplicate);
+
+render(frames[frames.length - 1].input);
+
 console.log(`\nRENDERED ${Object.keys(movie).length} FRAMES\n`)
 
-console.log('Compression methods used:', {
-  'input':        Object.values(movie).filter(v => !v.duplicate).filter(v => v.outputType == 'input').length,
-  'bbox':         Object.values(movie).filter(v => !v.duplicate).filter(v => v.outputType == 'bbox').length,
-  'bboxRLE':      Object.values(movie).filter(v => !v.duplicate).filter(v => v.outputType == 'bboxRLE').length,
-  'RLE':          Object.values(movie).filter(v => !v.duplicate).filter(v => v.outputType == 'RLE').length,
-  'diff':         Object.values(movie).filter(v => !v.duplicate).filter(v => v.outputType == 'diff').length,
-  'diffRLE':      Object.values(movie).filter(v => !v.duplicate).filter(v => v.outputType == 'diffRLE').length,
-  'diffBbox':     Object.values(movie).filter(v => !v.duplicate).filter(v => v.outputType == 'diffBbox').length,
-  'diffBboxRLE':  Object.values(movie).filter(v => !v.duplicate).filter(v => v.outputType == 'diffBboxRLE').length,
+console.log('Encoding methods used:', {
+  'input':        frames.filter(v => v.outputType == 'input').length,
+  'bbox':         frames.filter(v => v.outputType == 'bbox').length,
+  'bboxRLE':      frames.filter(v => v.outputType == 'bboxRLE').length,
+  'RLE':          frames.filter(v => v.outputType == 'RLE').length,
+  'diff':         frames.filter(v => v.outputType == 'diff').length,
+  'diffRLE':      frames.filter(v => v.outputType == 'diffRLE').length,
+  'diffBbox':     frames.filter(v => v.outputType == 'diffBbox').length,
+  'diffBboxRLE':  frames.filter(v => v.outputType == 'diffBboxRLE').length,
+  'sprited':      frames.filter(v => v.outputType == 'sprited').length,
 });
 
 const input = Object.values(movie).reduce((a, v) => a + v.input.length, 0);
-const rle = Object.values(movie).filter(v => !v.duplicate).reduce((a, v) => a + v.RLE.length, 0);
-const diffrle = Object.values(movie).filter(v => !v.duplicate).reduce((a, v) => a + (v.diffRLE ? v.diffRLE.length : v.RLE.length), 0);
-const output = Object.values(movie).filter(v => !v.duplicate).reduce((a, v) => a + v[v.outputType].length, 0);
+const rle = frames.reduce((a, v) => a + v.RLE.length, 0);
+const diffrle = frames.reduce((a, v) => a + (v.diffRLE ? v.diffRLE.length : v.RLE.length), 0);
+const output = frames.reduce((a, v) => a + v[v.outputType].length, 0);
 console.log(`\n${input} bytes uncompressed`);
 console.log(`${rle} bytes RLE encoded (${Math.round((input-rle)/input*1000)/10}% compression rate)`);
 console.log(`${diffrle} bytes RLE encoded over the diff (${Math.round((input-diffrle)/input*1000)/10}% compression rate)`);
@@ -139,6 +170,8 @@ console.log(`${output} bytes for the chosen output (${Math.round((input-output)/
 const totalSize = Math.ceil(output/(FRAME_END-FRAME_START+1)*6562);
 const maxSize = 62261;
 console.log(`\nExtrapolated to 6562 frames at 15FPS, this would be ${totalSize} bytes ${totalSize > maxSize ? `(${totalSize - maxSize} bytes (${Math.round((totalSize - maxSize)/totalSize*1000)/10}%) too much)` : `-- We made it! 🎉`}`)
+
+/* Done! Some helper functions from here on down */
 
 // Takes the input image (RGBA data) and scales it to the target width and
 // height, with one bit per pixel black and white.
