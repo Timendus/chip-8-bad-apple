@@ -92,22 +92,13 @@
     vF := 1
     i += vF
   #end
-  v1 := 128
-  v1 &= v0                # v1 is wether this is a diff frame or a keyframe
-  if v1 != 0 then clear
-  frames-per-image := 63
+  frames-per-image := 31
   frames-per-image &= v0  # number of frames to show this image for
   vF := 1                 # number of bytes consumed so far
   update-frame-pointer
 
-  # Show/update the image on screen
-  v1 := 64
-  v1 &= v0
-  if v1 == 0 begin
-    plain-copy
-  else
-    rle-decode
-  end
+  # Show the next frame on the screen
+  decode # takes i and v0 as input
 
   # Are we done..?
   :alias unpack-hi v2

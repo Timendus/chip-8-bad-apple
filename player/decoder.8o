@@ -1,16 +1,62 @@
 :alias X v2
 :alias Y v3
+:alias startX v4
+:alias width v5
+:alias height v6
 
 :const HORIZ_MARGIN 8
 :const OUTPUT_WIDTH 48
 :const OUTPUT_HEIGHT 32
 :calc HORIZ_END { HORIZ_MARGIN + OUTPUT_WIDTH }
 
+# Decode the next frame, pointed to by i
+# v0 must hold the settings byte of this frame
+: decode
+  v1 := 128
+  v1 &= v0          # Clear screen?
+  if v1 != 0 then clear
+  v1 := 32
+  v1 &= v0          # Bounding box enabled?
+  if v1 == 0 begin
+    # No bbox, so do the whole screen
+    X := HORIZ_MARGIN
+    Y := 0
+    startX := HORIZ_MARGIN
+    width := HORIZ_END
+    height := OUTPUT_HEIGHT
+  else
+    # Decode bbox coordinates from the next two bytes
+    load v8 - v9
+    vF := 2         # This load doesn't post-increment in XO-CHIP
+    i += vF
+    vF := 2
+    update-frame-pointer
+
+    Y := 31         # Take bottom 5 bits for minY and maxY
+    Y &= v8
+    height := 31
+    height &= v9
+    vF := 1
+    height += vF    # maxY is *inclusive*
+    v1 := 0xE0      # Take the top three bits for minX and maxX
+    v8 &= v1  v8 >>= v8  v8 >>= v8  # Shift down and convert from bytes to pixels
+    v9 &= v1  v9 >>= v9  v9 >>= v9
+
+    startX := HORIZ_MARGIN
+    startX += v8
+    X := startX
+    width := HORIZ_MARGIN
+    width += v9
+    width += 8      # maxX is *inclusive*
+  end
+  v1 := 64
+  v1 &= v0          # RLE enabled?
+  if v1 != 0 then jump rle-decode
+  # Else: Fall through to plain-copy
+
 # XOR the data at i directly to the screen
 # Don't mess up vB - vE, make sure we update frame pointer
 : plain-copy
-  X := HORIZ_MARGIN
-  Y := 0
   loop
     sprite X Y 1
     vF := 1
@@ -18,7 +64,7 @@
     vF := 1
     update-frame-pointer
     next-coordinate
-    if Y != OUTPUT_HEIGHT then
+    if Y != height then
   again
   return
 
@@ -26,8 +72,6 @@
 # i points to the first run length
 # Don't mess up vB - vE, make sure we update frame pointer
 : rle-decode
-  X := HORIZ_MARGIN
-  Y := 0
   loop
     load v0
     #if SCHIP
@@ -67,14 +111,13 @@
       again
     end
 
-    if Y != OUTPUT_HEIGHT then
+    if Y != height then
   again
   return
 
 : next-coordinate
   X += 8
-  if X == HORIZ_END begin
-    X := HORIZ_MARGIN
-    Y += 1
-  end
+  if X != width then return
+  X := startX
+  Y += 1
   return
