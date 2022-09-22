@@ -10,31 +10,36 @@ const rleEncode = require('./rle.js');
 const spriting = require('./spriting.js');
 
 const FRAME_START   = 1;
-const FRAME_END     = 1600;
+const FRAME_END     = 2800;
 const FRAME_STEP    = 2;
 const TARGET_WIDTH  = 48;   // Should be divisible by 8
 const TARGET_HEIGHT = 32;
 
-const NUM_PIXELS_CONSIDERED_NO_CHANGE = 0;
-const SPRITING_PIXEL_DIFFERENCE_ALLOWED = 3;
+const NUM_PIXELS_CONSIDERED_NO_CHANGE = 0;  // Didn't like this effect, so disabled
+const SPRITING_DIFFERENCE_ALLOWED = 0.2030;
+// 0.1954 happens to lead to 256 unique sprites when applied to all frames
+// 0.2030 happens to lead to 255 unique sprites when applied to all diffs
 
 const movie = {}
 
 /* Load in all the frame images */
 
+let lastImage = false;
 for ( let i = FRAME_START; i <= FRAME_END; i+=FRAME_STEP ) {
   const id = i < 1000 ? String(i).padStart(3, '0') : i;
   const file = `frames/scaled/bad_apple_${id}.png`;
   const fileData = fs.readFileSync(file);
   const png = PNG.sync.read(fileData);
   const image = reduceTo1Bit(png.data);
+  const diff = lastImage ? image.map((v, i) => v ^ lastImage[i]) : undefined;
   movie[i] = {
     id,
     input: image,
-    sprites: spriting.chopUp(image, TARGET_WIDTH, TARGET_HEIGHT),
+    sprites: lastImage ? spriting.chopUp(diff, TARGET_WIDTH, TARGET_HEIGHT) : undefined,
     frames: 1,
     outputType: 'input'
   };
+  lastImage = image;
 }
 
 /* Determine the dictionary of unique sprites to use */
@@ -43,18 +48,23 @@ const uniqueSprites = spriting.nonEmpty(
   spriting.uniqueSprites(
     Object.values(movie)
           .map(f => f.sprites)
+          .filter(f => f)
           .flat()
   )
 );
-const spriteSet = spriting.differingSprites(uniqueSprites, SPRITING_PIXEL_DIFFERENCE_ALLOWED*2);
+const dictionary = spriting.differingSprites(uniqueSprites, SPRITING_DIFFERENCE_ALLOWED);
+console.log(spriting.renderSprites(dictionary));
 
 console.log(`Video has ${uniqueSprites.length} unique sprites`);
-console.log(`Video has ${spriteSet.length} sprites that differ more than ${SPRITING_PIXEL_DIFFERENCE_ALLOWED*2} pixels`);
+console.log(`Video has ${dictionary.length} sprites that differ more than ${SPRITING_DIFFERENCE_ALLOWED}`);
+
+if ( dictionary.length > 256 ) throw 'dictionary size too large to fit in 8 bits';
 
 /* Do the second run over all the frames, encoding each in every format */
 
 const nibbleLookup = [0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4];
 let prev = false;
+let numSprited = 0;
 for ( const f of Object.keys(movie) ) {
   const frame = movie[f];
 
@@ -66,9 +76,9 @@ for ( const f of Object.keys(movie) ) {
   }
 
   if ( f > FRAME_START ) {
-    frame.diff = frame.input.map((v, i) => v ^ movie[prev].input[i]);
+    frame.diff = frame.input.map((v, i) => v ^ movie[prev].output[i]);
     frame.diffRLE = rleEncode(frame.diff);
-    // frame.sprited = spriting.encode(frame.diff, TARGET_WIDTH, TARGET_HEIGHT, spriteSet);
+    frame.sprited = spriting.encode(movie[prev].output, frame.input, frame.diff, TARGET_WIDTH, TARGET_HEIGHT, dictionary);
     frame.boundingBox = getBoundingBox(frame.diff);
     if ( frame.boundingBox.slice.length > 0 ) {
       frame.diffBbox = [...frame.boundingBox.encoded, ...frame.boundingBox.slice];
@@ -88,20 +98,31 @@ for ( const f of Object.keys(movie) ) {
   }
 
   // Find encoding method with the shortest output
-  [
+  const methods = [
     'input',
     'RLE',
     'bbox',
     'bboxRLE',
     'diffRLE',
     'diffBbox',
-    'diffBboxRLE',
-    'sprited',
-  ].forEach(method => {
+    'diffBboxRLE'
+  ];
+  if ( numSprited < 3 ) methods.push('sprited');
+  methods.forEach(method => {
     if ( frame[method] && frame[method].length < frame[frame.outputType].length )
       frame.outputType = method;
   });
-  frame.output = frame[frame.outputType];
+  frame.encoded = frame[frame.outputType];
+
+  // If encoding method is lossy, take the messed-up output for the next frame
+  if ( frame.outputType == 'sprited' ) {
+    numSprited += 1;
+    frame.output = spriting.decode(movie[prev].output, TARGET_WIDTH, frame.sprited, dictionary);
+  } else {
+    numSprited = 0;
+    frame.output = frame.input; // Lossless
+  }
+  // render(frame.output);
 
   if (!frame.duplicate) prev = f;
 }
@@ -132,10 +153,15 @@ fs.writeFileSync('player/frames.8o',
           return (
             `: bad_apple_${v.id} # ${v.outputType}\n` +
             `  0x${(settingsByte).toString(16).padStart(2, '0')}\n` +
-            formatForOcto(v.output)
+            formatForOcto(v.encoded)
           );
         })
         .join('\n')
+);
+
+fs.writeFileSync('player/dictionary.8o',
+  '#data\n\n: dictionary\n' +
+  dictionary.map(s => formatForOcto(s)).join('')
 );
 
 /* Show output and statistics */
@@ -167,9 +193,12 @@ console.log(`${rle} bytes RLE encoded (${Math.round((input-rle)/input*1000)/10}%
 console.log(`${diffrle} bytes RLE encoded over the diff (${Math.round((input-diffrle)/input*1000)/10}% compression rate)`);
 console.log(`${output} bytes for the chosen output (${Math.round((input-output)/input*1000)/10}% compression rate)`);
 
-const totalSize = Math.ceil(output/(FRAME_END-FRAME_START+1)*6562);
+console.log(`\n${dictionary.length} sprites in the dictionary, totalling ${dictionary.length * 8} bytes`);
+
+const totalSize = Math.ceil(output/(FRAME_END-FRAME_START+1)*6562) + dictionary.length * 8;
 const maxSize = 62261;
-console.log(`\nExtrapolated to 6562 frames at 15FPS, this would be ${totalSize} bytes ${totalSize > maxSize ? `(${totalSize - maxSize} bytes (${Math.round((totalSize - maxSize)/totalSize*1000)/10}%) too much)` : `-- We made it! 🎉`}`)
+console.log(`\nTotal size: ${output + dictionary.length * 8} bytes`);
+console.log(`Extrapolated to 6562 frames at 15FPS, this would be ${totalSize} bytes ${totalSize > maxSize ? `(${totalSize - maxSize} bytes (${Math.round((totalSize - maxSize)/totalSize*1000)/10}%) too much)` : `-- We made it! 🎉`}`)
 
 /* Done! Some helper functions from here on down */
 
