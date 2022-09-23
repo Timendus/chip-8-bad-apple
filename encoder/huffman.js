@@ -26,6 +26,7 @@ function createCodebook(node, bits='') {
   ];
 }
 
+// See: https://en.wikipedia.org/wiki/Canonical_Huffman_code
 function toCanonicalCodebook(codebook) {
   // Sort by codeword length, then value of character
   codebook = codebook.sort((a,b) => a[1].length - b[1].length || a[0] - b[0]);
@@ -38,7 +39,7 @@ function toCanonicalCodebook(codebook) {
       length = codebook[i][1].length;
     }
     codebook[i][1] = (code++).toString(2)
-                             .padStart(codebook[0][1].length, '0');
+                             .padStart(codebook[i][1].length, '0');
   }
   return codebook;
 }
