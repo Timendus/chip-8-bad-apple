@@ -8,6 +8,6 @@ const tree = huffman.createTree(data);
 const encoded = huffman.encode(data, tree);
 const decoded = huffman.decode(encoded, tree);
 
-console.log({ data, size: data.length * 8 });
+console.log({ data, size: data.length });
 console.log({ encoded, size: encoded.length });
-console.log({ decoded, size: decoded.length * 8 });
+console.log({ decoded, size: decoded.length });

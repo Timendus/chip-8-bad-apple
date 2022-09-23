@@ -31,23 +31,34 @@ function encode(data, tree) {
     a[k] = v;
     return a;
   }, {});
-  return data.map(v => mapping[v]).join('');
+  let bits = data.map(v => mapping[v]).join('');
+  const result = [];
+  const missing = 8 - bits.length % 8;
+  bits += '0'.repeat(missing);
+  for ( let i = 0; i < bits.length; i += 8 ) {
+    result.push(parseInt(bits.substr(i, 8), 2));
+  }
+  return result;
 }
 
 function decode(data, tree) {
-  const bits = data.split('');
   const decoded = [];
   let i = 0;
-  while ( i < bits.length ) {
+  let m = 128;
+  while ( i < data.length ) {
     let walker = tree;
-    while ( !('value' in walker) ) {
-      if ( bits[i] == '1' )
+    while ( i < data.length && !('value' in walker) ) {
+      if ( (data[i] & m) != 0 )
         walker = walker.right;
       else
         walker = walker.left;
-      i += 1;
+      m >>= 1;
+      if ( m == 0 ) {
+        i += 1;
+        m = 128;
+      }
     }
-    decoded.push(walker.value);
+    decoded.push(+walker.value);
   }
   return decoded;
 }
