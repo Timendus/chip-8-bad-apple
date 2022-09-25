@@ -8,6 +8,7 @@ const fs = require('fs');
 const PNG = require('pngjs').PNG;
 const rleEncode = require('./rle.js');
 const spriting = require('./spriting.js');
+const huffman = require('./huffman.js');
 
 const FRAME_START   = 1;
 const FRAME_END     = 2800;
@@ -69,20 +70,25 @@ for ( const f of Object.keys(movie) ) {
   const frame = movie[f];
 
   frame.RLE = rleEncode(frame.input);
+  frame.huffman = huffman.encode(frame.input, huffman.createTree(frame.input));
+  frame.RLEHuffman = huffman.encode(frame.RLE, huffman.createTree(frame.RLE));
   frame.boundingBox = getBoundingBox(frame.input);
   if ( frame.boundingBox.slice.length > 0 ) {
     frame.bbox = [...frame.boundingBox.encoded, ...frame.boundingBox.slice];
     frame.bboxRLE = [...frame.boundingBox.encoded, ...rleEncode(frame.boundingBox.slice)];
+    frame.bboxHuffman = [...frame.boundingBox.encoded, ...huffman.encode(frame.boundingBox.slice, huffman.createTree(frame.boundingBox.slice))];
   }
 
   if ( f > FRAME_START ) {
     frame.diff = frame.input.map((v, i) => v ^ movie[prev].output[i]);
     frame.diffRLE = rleEncode(frame.diff);
-    frame.sprited = spriting.encode(movie[prev].output, frame.input, frame.diff, TARGET_WIDTH, TARGET_HEIGHT, dictionary);
+    frame.diffHuffman = huffman.encode(frame.diff, huffman.createTree(frame.diff));
+    // frame.sprited = spriting.encode(movie[prev].output, frame.input, frame.diff, TARGET_WIDTH, TARGET_HEIGHT, dictionary);
     frame.boundingBox = getBoundingBox(frame.diff);
     if ( frame.boundingBox.slice.length > 0 ) {
       frame.diffBbox = [...frame.boundingBox.encoded, ...frame.boundingBox.slice];
       frame.diffBboxRLE = [...frame.boundingBox.encoded, ...rleEncode(frame.boundingBox.slice)];
+      frame.diffBboxHuffman = [...frame.boundingBox.encoded, ...huffman.encode(frame.boundingBox.slice, huffman.createTree(frame.boundingBox.slice))];
     }
 
     frame.numChangedPixels = frame.diff.reduce((a,v) =>
