@@ -21,6 +21,23 @@ const SPRITING_DIFFERENCE_ALLOWED = 0.2030;
 // 0.1954 happens to lead to 256 unique sprites when applied to all frames
 // 0.2030 happens to lead to 255 unique sprites when applied to all diffs
 
+const methods = [
+  'input',
+  'RLE',
+  'huffman',
+  'RLEHuffman',
+  'bbox',
+  'bboxRLE',
+  'bboxHuffman',
+  'diff',
+  'diffRLE',
+  'diffHuffman',
+  'diffBbox',
+  'diffBboxRLE',
+  'diffBboxHuffman',
+  'sprited'
+];
+
 const movie = {}
 
 /* Load in all the frame images */
@@ -104,16 +121,7 @@ for ( const f of Object.keys(movie) ) {
   }
 
   // Find encoding method with the shortest output
-  const methods = [
-    'input',
-    'RLE',
-    'bbox',
-    'bboxRLE',
-    'diffRLE',
-    'diffBbox',
-    'diffBboxRLE'
-  ];
-  if ( numSprited < 3 ) methods.push('sprited');
+  if ( numSprited > 2 ) methods.splice(methods.indexOf('spriting'), 1);
   methods.forEach(method => {
     if ( frame[method] && frame[method].length < frame[frame.outputType].length )
       frame.outputType = method;
@@ -165,6 +173,10 @@ fs.writeFileSync('player/frames.8o',
         .join('\n')
 );
 
+if ( !Object.values(movie).some(v => !v.duplicate && v.outputType == 'sprited') ) {
+  dictionary.splice(0, dictionary.length);
+}
+
 fs.writeFileSync('player/dictionary.8o',
   '#data\n\n: dictionary\n' +
   dictionary.map(s => formatForOcto(s)).join('')
@@ -172,39 +184,32 @@ fs.writeFileSync('player/dictionary.8o',
 
 /* Show output and statistics */
 
+const input = Object.values(movie).reduce((a, v) => a + v.input.length, 0);
 const frames = Object.values(movie).filter(v => !v.duplicate);
 
 render(frames[frames.length - 1].input);
 
-console.log(`\nRENDERED ${Object.keys(movie).length} FRAMES\n`)
+console.log(`\nRENDERED ${Object.keys(movie).length} FRAMES`);
+console.log(`Raw, uncompressed size: ${input} bytes`);
+console.log(`Skipping ${Object.keys(movie).length - frames.length} duplicate frames (${(Object.keys(movie).length - frames.length) * 192} bytes)`);
+console.log(`${frames.length} frames left, uncompressed size: ${frames.length * 192} bytes\n`);
 
-console.log('Encoding methods used:', {
-  'input':        frames.filter(v => v.outputType == 'input').length,
-  'bbox':         frames.filter(v => v.outputType == 'bbox').length,
-  'bboxRLE':      frames.filter(v => v.outputType == 'bboxRLE').length,
-  'RLE':          frames.filter(v => v.outputType == 'RLE').length,
-  'diff':         frames.filter(v => v.outputType == 'diff').length,
-  'diffRLE':      frames.filter(v => v.outputType == 'diffRLE').length,
-  'diffBbox':     frames.filter(v => v.outputType == 'diffBbox').length,
-  'diffBboxRLE':  frames.filter(v => v.outputType == 'diffBboxRLE').length,
-  'sprited':      frames.filter(v => v.outputType == 'sprited').length,
+console.log('Encoding methods used:');
+methods.forEach(m => {
+  const size = frames.reduce((a, v) => a + (v[m] ? v[m].length : 0), 0);
+  const total = frames.reduce((a, v) => a + (v[m] ? v.input.length : 0), 0);
+  const numFrames = frames.filter(v => v.outputType == m).length;
+  console.log(`${m.padEnd(15, ' ')}  -  ${numFrames.toString().padStart(4, ' ')} frames (${(Math.round(numFrames/frames.length*1000)/10).toString().padStart(4, ' ')}%)  -  Compression: ${(Math.round((total - size)/total*1000)/10).toString().padStart(4, ' ')}% (${size}/${total})`);
 });
 
-const input = Object.values(movie).reduce((a, v) => a + v.input.length, 0);
-const rle = frames.reduce((a, v) => a + v.RLE.length, 0);
-const diffrle = frames.reduce((a, v) => a + (v.diffRLE ? v.diffRLE.length : v.RLE.length), 0);
 const output = frames.reduce((a, v) => a + v[v.outputType].length, 0);
-console.log(`\n${input} bytes uncompressed`);
-console.log(`${rle} bytes RLE encoded (${Math.round((input-rle)/input*1000)/10}% compression rate)`);
-console.log(`${diffrle} bytes RLE encoded over the diff (${Math.round((input-diffrle)/input*1000)/10}% compression rate)`);
-console.log(`${output} bytes for the chosen output (${Math.round((input-output)/input*1000)/10}% compression rate)`);
-
-console.log(`\n${dictionary.length} sprites in the dictionary, totalling ${dictionary.length * 8} bytes`);
+console.log(`\n${output} bytes for the chosen output (${Math.round((input-output)/input*1000)/10}% compression rate)`);
+console.log(`${dictionary.length} sprites in the dictionary, totalling ${dictionary.length * 8} bytes`);
 
 const totalSize = Math.ceil(output/(FRAME_END-FRAME_START+1)*6562) + dictionary.length * 8;
 const maxSize = 62261;
-console.log(`\nTotal size: ${output + dictionary.length * 8} bytes`);
-console.log(`Extrapolated to 6562 frames at 15FPS, this would be ${totalSize} bytes ${totalSize > maxSize ? `(${totalSize - maxSize} bytes (${Math.round((totalSize - maxSize)/totalSize*1000)/10}%) too much)` : `-- We made it! 🎉`}`)
+console.log(`\nTOTAL SIZE: ${output + dictionary.length * 8} bytes`);
+console.log(`Extrapolated to the total video at 15FPS, this would be ${totalSize} bytes ${totalSize > maxSize ? `(${totalSize - maxSize} bytes (${Math.round((totalSize - maxSize)/totalSize*1000)/10}%) too much 😢)` : `-- We made it! 🎉`}`)
 
 /* Done! Some helper functions from here on down */
 
