@@ -1,6 +1,7 @@
 # Bad Apple on XO-CHIP
 
-This is an attempt to bring the well known Bad Apple music video to XO-CHIP,
+This is an attempt to bring the well known [Bad
+Apple!!](https://en.wikipedia.org/wiki/Bad_Apple!!) music video to XO-CHIP,
 music and all.
 
 ## Development log
@@ -31,9 +32,9 @@ And keep in mind that we also need some storage left for program code and music.
 So that's going to be an insanely tight squeeze. This project is probably doomed
 from the start 😄
 
-To improve my odds a bit, I asked Kouzerumatsukite (who made the XO-tracker last
-year) if he would be interested in joining me on this project for the music
-part. I enjoy making music, but I'm no hero when it comes to trackers.
+To improve my odds a bit, I asked Kouzeru (who made the XO-tracker last year) if
+he would be interested in joining me on this project for the music part. I enjoy
+making music, but I'm no hero when it comes to trackers.
 
 In a little over a week, the first teaser video came my way with the first parts
 of the Bad Apple song, and it sounded amazing for the platform 🎉 This was a
@@ -287,10 +288,13 @@ our decoder, we just do something like:
   sprite v0 v1 8
 ```
 
-This assumes we have a dictionary of max 256 entries and we are free to point to
-any X and Y coordinate.
+This assumes we have a dictionary of max 256 entries and we use an entire byte
+per dimension to store our X and Y coordinate, which may not be the best
+assumptions, but this illustrates the concept well. Simple, fast and probably
+quite efficient. You could even paste multiple sprites over each other to get
+more complicated patterns.
 
 Now the trick that makes this lossy is that we don't try to have every possible
 sprite in our dictionary, but we filter the list based on some criteria to come
-to a subset that is "close enough" to draw the frames with. And herein lies the
-hard part.
+to a subset that is "close enough" to draw an approximation of the frames with.
+And herein lies the hard part.
