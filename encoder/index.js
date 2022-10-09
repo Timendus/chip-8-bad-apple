@@ -123,7 +123,7 @@ for ( const f of Object.keys(movie) ) {
 
     if ( frame.duplicate ) {
       movie[prev].frames++;
-      assert(movie[prev].frames < 31, "Number of frames to merge is less than 31");
+      assert(movie[prev].frames < 32, `Number of frames to merge is less than 32`);
     }
   }
 
