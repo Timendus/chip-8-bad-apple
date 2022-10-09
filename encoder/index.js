@@ -16,26 +16,31 @@ const FRAME_STEP    = 2;
 const TARGET_WIDTH  = 48;   // Should be divisible by 8
 const TARGET_HEIGHT = 32;
 
+const MAX_SIZE = 62261;
 const NUM_PIXELS_CONSIDERED_NO_CHANGE = 0;  // Didn't like this effect, so disabled
 const SPRITING_DIFFERENCE_ALLOWED = 0.2030;
 // 0.1954 happens to lead to 256 unique sprites when applied to all frames
 // 0.2030 happens to lead to 255 unique sprites when applied to all diffs
 
 const methods = [
-  'input',
+  // 'input',
   'RLE',
-  'huffman',
-  'RLEHuffman',
+  // 'huffman',
+  'globalHuffman',
+  // 'RLEHuffman',
   'bbox',
   'bboxRLE',
-  'bboxHuffman',
-  'diff',
+  // 'bboxHuffman',
+  'bboxGlobalHuffman',
+  // 'diff',
   'diffRLE',
-  'diffHuffman',
+  // 'diffHuffman',
+  'diffGlobalHuffman',
   'diffBbox',
   'diffBboxRLE',
-  'diffBboxHuffman',
-  'sprited'
+  // 'diffBboxHuffman',
+  'diffBboxGlobalHuffman',
+  // 'sprited'
 ];
 
 const movie = {}
@@ -55,7 +60,8 @@ for ( let i = FRAME_START; i <= FRAME_END; i+=FRAME_STEP ) {
     input: image,
     sprites: lastImage ? spriting.chopUp(diff, TARGET_WIDTH, TARGET_HEIGHT) : undefined,
     frames: 1,
-    outputType: 'input'
+    outputType: 'input',
+    diff: i == FRAME_START ? false : image.map((v, n) => v ^ movie[i - FRAME_STEP].input[n]) // Assume lossless
   };
   lastImage = image;
 }
@@ -78,6 +84,9 @@ console.log(`Video has ${dictionary.length} sprites that differ more than ${SPRI
 
 if ( dictionary.length > 256 ) throw 'dictionary size too large to fit in 8 bits';
 
+const possibleValues = Object.values(movie).map(f => [f.diff]).flat(2);
+const globalCodebook = huffman.createCodebook(possibleValues);
+
 /* Do the second run over all the frames, encoding each in every format */
 
 const nibbleLookup = [0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4];
@@ -87,32 +96,41 @@ for ( const f of Object.keys(movie) ) {
   const frame = movie[f];
 
   frame.RLE = rleEncode(frame.input);
-  frame.huffman = huffman.encode(frame.input, huffman.createTree(frame.input));
-  frame.RLEHuffman = huffman.encode(frame.RLE, huffman.createTree(frame.RLE));
+  frame.huffman = huffman.encodeWithCodebook(frame.input);
+  frame.globalHuffman = huffman.encode(frame.input, globalCodebook);
+  frame.RLEHuffman = huffman.encodeWithCodebook(frame.RLE);
   frame.boundingBox = getBoundingBox(frame.input);
   if ( frame.boundingBox.slice.length > 0 ) {
     frame.bbox = [...frame.boundingBox.encoded, ...frame.boundingBox.slice];
     frame.bboxRLE = [...frame.boundingBox.encoded, ...rleEncode(frame.boundingBox.slice)];
-    frame.bboxHuffman = [...frame.boundingBox.encoded, ...huffman.encode(frame.boundingBox.slice, huffman.createTree(frame.boundingBox.slice))];
+    frame.bboxHuffman = [...frame.boundingBox.encoded, ...huffman.encodeWithCodebook(frame.boundingBox.slice)];
+    frame.bboxGlobalHuffman = [...frame.boundingBox.encoded, ...huffman.encode(frame.boundingBox.slice, globalCodebook)];
   }
 
   // Validate Huffman encoding
-  const decoded = huffman.decode(frame.huffman).slice(0, frame.input.length);
+  const decoded = huffman.decodeWithCodebook(frame.huffman).slice(0, frame.input.length);
   assert(
     decoded.every((v,i) => v == frame.input[i]),
     `Decoded does not match input for frame ${frame.id}.\n\nGot decoded ${JSON.stringify(decoded)}\n\nExpected input ${JSON.stringify(frame.input)}\n`
+  );
+  const globalDecoded = huffman.decode(frame.globalHuffman, globalCodebook).slice(0, frame.input.length);
+  assert(
+    globalDecoded.every((v,i) => v == frame.input[i]),
+    `Decoded (with global codebook) does not match input for frame ${frame.id}.\n\nGot decoded ${JSON.stringify(globalDecoded)}\n\nExpected input ${JSON.stringify(frame.input)}\n`
   );
 
   if ( f > FRAME_START ) {
     frame.diff = frame.input.map((v, i) => v ^ movie[prev].output[i]);
     frame.diffRLE = rleEncode(frame.diff);
-    frame.diffHuffman = huffman.encode(frame.diff, huffman.createTree(frame.diff));
+    frame.diffHuffman = huffman.encodeWithCodebook(frame.diff);
+    frame.diffGlobalHuffman = huffman.encode(frame.diff, globalCodebook);
     // frame.sprited = spriting.encode(movie[prev].output, frame.input, frame.diff, TARGET_WIDTH, TARGET_HEIGHT, dictionary);
     frame.boundingBox = getBoundingBox(frame.diff);
     if ( frame.boundingBox.slice.length > 0 ) {
       frame.diffBbox = [...frame.boundingBox.encoded, ...frame.boundingBox.slice];
       frame.diffBboxRLE = [...frame.boundingBox.encoded, ...rleEncode(frame.boundingBox.slice)];
-      frame.diffBboxHuffman = [...frame.boundingBox.encoded, ...huffman.encode(frame.boundingBox.slice, huffman.createTree(frame.boundingBox.slice))];
+      frame.diffBboxHuffman = [...frame.boundingBox.encoded, ...huffman.encodeWithCodebook(frame.boundingBox.slice)];
+      frame.diffBboxGlobalHuffman = [...frame.boundingBox.encoded, ...huffman.encode(frame.boundingBox.slice, globalCodebook)];
     }
 
     frame.numChangedPixels = frame.diff.reduce((a,v) =>
@@ -193,12 +211,13 @@ fs.writeFileSync('player/dictionary.8o',
 
 const input = Object.values(movie).reduce((a, v) => a + v.input.length, 0);
 const frames = Object.values(movie).filter(v => !v.duplicate);
+const skippedFrames = Object.keys(movie).length - frames.length;
 
 render(frames[frames.length - 1].input);
 
 console.log(`\nRENDERED ${Object.keys(movie).length} FRAMES`);
 console.log(`Raw, uncompressed size: ${input} bytes`);
-console.log(`Skipping ${Object.keys(movie).length - frames.length} duplicate frames (${(Object.keys(movie).length - frames.length) * 192} bytes)`);
+console.log(`Skipping ${skippedFrames} duplicate frames (${skippedFrames * 192} bytes, ${Math.round(skippedFrames * 192 / input * 1000) / 10}%)`);
 console.log(`${frames.length} frames left, uncompressed size: ${frames.length * 192} bytes\n`);
 
 console.log('Encoding methods used:');
@@ -206,17 +225,22 @@ methods.forEach(m => {
   const size = frames.reduce((a, v) => a + (v[m] ? v[m].length : 0), 0);
   const total = frames.reduce((a, v) => a + (v[m] ? v.input.length : 0), 0);
   const numFrames = frames.filter(v => v.outputType == m).length;
-  console.log(`${m.padEnd(15, ' ')}  -  ${numFrames.toString().padStart(4, ' ')} frames (${(Math.round(numFrames/frames.length*1000)/10).toString().padStart(4, ' ')}%)  -  Compression: ${(Math.round((total - size)/total*1000)/10).toString().padStart(4, ' ')}% (${size}/${total})`);
+  console.log(`${m.padEnd(22, ' ')}  -  ${numFrames.toString().padStart(4, ' ')} frames (${(Math.round(numFrames/frames.length*1000)/10).toString().padStart(4, ' ')}%)  -  Compression: ${(Math.round((total - size)/total*1000)/10).toString().padStart(4, ' ')}% (${size}/${total})`);
 });
 
 const output = frames.reduce((a, v) => a + v[v.outputType].length, 0);
 console.log(`\n${output} bytes for the chosen output (${Math.round((input-output)/input*1000)/10}% compression rate)`);
 console.log(`${dictionary.length} sprites in the dictionary, totalling ${dictionary.length * 8} bytes`);
+console.log(`${globalCodebook.length} entries in the global Huffman codebook, totalling ${huffman.encodeCodebook(globalCodebook).length} bytes`);
 
-const totalSize = Math.ceil(output/(FRAME_END-FRAME_START+1)*6562) + dictionary.length * 8;
-const maxSize = 62261;
-console.log(`\nTOTAL SIZE: ${output + dictionary.length * 8} bytes`);
-console.log(`Extrapolated to the total video at 15FPS, this would be ${totalSize} bytes ${totalSize > maxSize ? `(${totalSize - maxSize} bytes (${Math.round((totalSize - maxSize)/totalSize*1000)/10}%) too much 😢)` : `-- We made it! 🎉`}`)
+const totalSize = Math.ceil(output/(FRAME_END-FRAME_START+1)*6562);
+const additionalSize = dictionary.length * 8 + huffman.encodeCodebook(globalCodebook).length;
+console.log(`\nTOTAL SIZE: ${output + additionalSize} bytes`);
+console.log(`--> Guess extrapolation to the total video at 15FPS: ${totalSize + additionalSize} bytes ${(totalSize + additionalSize) > MAX_SIZE ? `(${(totalSize + additionalSize) - MAX_SIZE} bytes (${Math.round(((totalSize + additionalSize) - MAX_SIZE)/totalSize*1000)/10}%) too much 😢)` : `-- We may have made it! 🎉`}`)
+
+if ( output + additionalSize < MAX_SIZE ) {
+  console.log(`\n🎉 We really made it! 😄`)
+}
 
 /* Done! Some helper functions from here on down */
 

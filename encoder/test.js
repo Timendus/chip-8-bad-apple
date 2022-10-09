@@ -11,12 +11,15 @@ const data = [0,0,0,0,15,255,0,0,0,0,31,255,0,0,0,0,31,255,0,0,0,0,31,255,0,0,0,
 ,0,0,15,255,48,0,0,0,7,255,32,0,0,0,1,255,32,0,0,0,0,255,64,0,0,0,0,127,64,0,0,0,0,63,0,0,0,0,0,31,0,0,0,0,0,31,0,0,0,0,0,15,0,0,0,0,0,15,0,0,0,0,0,15,0,0,0,0,0,15,0,0,0,0,0,15,
 0,0,0,0,0,15,0,0,0,0,0,15,0,0,0,0,0,15,0,0,0,0,0,15,0,0,0,0,0,15,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0];
 
-const tree = huffman.createTree(data);
-const encoded = huffman.encode(data, tree);
-const decoded = huffman.decode(encoded);
+const codebook = huffman.createCodebook(data);
+const encodedCodebook = huffman.encodeCodebook(codebook);
+const encoded = huffman.encode(data, codebook);
+
+const decodedCodebook = huffman.decodeCodebook(encodedCodebook);
+const decoded = huffman.decode(encoded, decodedCodebook);
 
 console.log({ data, size: data.length });
-console.log({ encoded, size: encoded.length });
-console.log({ decoded, size: decoded.length });
+console.log({ encoded, encodedCodebook, size: encoded.length + encodedCodebook.length });
+console.log({ decoded, decodedCodebook, size: decoded.length });
 
 assert(decoded.slice(0, data.length).every((v,i) => v == data[i]), 'Decoded does not match data');

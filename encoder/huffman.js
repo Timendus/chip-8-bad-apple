@@ -17,12 +17,12 @@ function createTree(data) {
   return sorted[0];
 }
 
-function createCodebook(node, bits='') {
+function buildCodebook(node, bits='') {
   if ( 'value' in node )
     return [[node.value, bits]];
   return [
-    ...createCodebook(node.left, bits + '0'),
-    ...createCodebook(node.right, bits + '1')
+    ...buildCodebook(node.left, bits + '0'),
+    ...buildCodebook(node.right, bits + '1')
   ];
 }
 
@@ -44,6 +44,10 @@ function toCanonicalCodebook(codebook) {
   return codebook;
 }
 
+function createCodebook(data) {
+  return toCanonicalCodebook(buildCodebook(createTree(data)));
+}
+
 function encodeCodebook(codebook) {
   const encodedCodeBook = [];
   for ( let i = 1; i <= codebook[codebook.length - 1][1].length; i++ ) {
@@ -52,15 +56,15 @@ function encodeCodebook(codebook) {
   return [encodedCodeBook.length, ...encodedCodeBook, ...codebook.map(([c]) => +c)];
 }
 
-function decodeCodebook(data) {
-  const bitsLength = data[0];
+function decodeCodebook(encoded) {
+  const bitsLength = encoded[0];
   const codebook = [];
   let code = 0;
   let i = 1;
   for ( let bits = 1; bits <= bitsLength; bits++ ) {
-    let numToGo = data[bits];
+    let numToGo = encoded[bits];
     while ( numToGo > 0 ) {
-      codebook.push([data[bitsLength + i], code.toString(2).padStart(bits, '0')]);
+      codebook.push([encoded[bitsLength + i], code.toString(2).padStart(bits, '0')]);
       i += 1;
       numToGo -= 1;
       code += 1;
@@ -70,12 +74,18 @@ function decodeCodebook(data) {
   return codebook;
 }
 
-function encode(data, tree) {
-  // Create codebook from Huffman tree
-  const codebook = toCanonicalCodebook(createCodebook(tree));
-
+function encode(data, codebook) {
   // Encode data using the codebook
-  let bits = data.map(v => codebook.find(c => c[0] == v)[1]).join('');
+  let bits;
+  try {
+    bits = data.map(v => codebook.find(c => c[0] == ''+v)[1]).join('');
+  } catch(e) {
+    throw `Can't find these values in the given codebook: ${
+      data.filter((v, i) => data.indexOf(v) == i)
+          .filter(v => !codebook.map(v => v[0]).includes(''+v))
+          .join(', ')
+    } (${e})`;
+  }
 
   // Convert string of bits to array of bytes
   const encodedData = [];
@@ -85,19 +95,12 @@ function encode(data, tree) {
     encodedData.push(parseInt(bits.substr(i, 8), 2));
   }
 
-  // Encode and prepend the codebook
-  const encodedCodeBook = encodeCodebook(codebook);
-
   // Done!
-  return [...encodedCodeBook, ...encodedData];
+  return encodedData;
 }
 
-function decode(data) {
-  // Get the codebook from the first part of the data
-  const codebook = decodeCodebook(data);
-
+function decode(data, codebook) {
   // Decode the data using the codebook
-  data = data.slice(1 + data[0] + codebook.length);
   const decoded = [];
   let i = 0;
   let m = 128;
@@ -121,8 +124,23 @@ function decode(data) {
   return decoded;
 }
 
+function encodeWithCodebook(data) {
+  const codebook = createCodebook(data);
+  return [...encodeCodebook(codebook), ...encode(data, codebook)];
+}
+
+function decodeWithCodebook(data) {
+  const codebook = decodeCodebook(data);
+  data = data.slice(data[0] + codebook.length + 1);
+  return decode(data, codebook);
+}
+
 module.exports = {
-  createTree,
+  createCodebook,
   encode,
-  decode
+  decode,
+  encodeCodebook,
+  decodeCodebook,
+  encodeWithCodebook,
+  decodeWithCodebook,
 };
