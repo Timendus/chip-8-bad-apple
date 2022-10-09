@@ -64,8 +64,8 @@ function decodeCodebook(data) {
       i += 1;
       numToGo -= 1;
       code += 1;
-      if ( numToGo == 0 ) code <<= 1;
     }
+    code <<= 1;
   }
   return codebook;
 }

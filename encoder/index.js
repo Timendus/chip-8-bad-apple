@@ -96,6 +96,13 @@ for ( const f of Object.keys(movie) ) {
     frame.bboxHuffman = [...frame.boundingBox.encoded, ...huffman.encode(frame.boundingBox.slice, huffman.createTree(frame.boundingBox.slice))];
   }
 
+  // Validate Huffman encoding
+  const decoded = huffman.decode(frame.huffman).slice(0, frame.input.length);
+  assert(
+    decoded.every((v,i) => v == frame.input[i]),
+    `Decoded does not match input for frame ${frame.id}.\n\nGot decoded ${JSON.stringify(decoded)}\n\nExpected input ${JSON.stringify(frame.input)}\n`
+  );
+
   if ( f > FRAME_START ) {
     frame.diff = frame.input.map((v, i) => v ^ movie[prev].output[i]);
     frame.diffRLE = rleEncode(frame.diff);
