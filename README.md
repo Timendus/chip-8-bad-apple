@@ -6,7 +6,7 @@ music and all.
 
 ## Development log
 
-### Getting started
+### Video on CHIP-8?
 
 How much can you really fit in XO-CHIP's ~64k of memory? When I'm hand-writing
 code it seems like I never come near the limit. Even when I add lots of four
@@ -16,21 +16,24 @@ generally plenty of space.
 But would it be enough to store an entire music video? A quick
 back-of-the-napkin calculation did not make me happy:
 
-> An uncompressed image of 64 x 32 pixels (in "lores" mode) is 256 bytes. The
-> entire Bad Apple video consists of 6562 frames at 30FPS. 6562 x 256 = 1679872
-> bytes, or one megabyte of data. That's 26 times the memory we have available.
->
-> Calculating from the other end: The whole video is 3 minutes and 39 seconds.
-> That's a little under 300 bytes per second. Not per frame, per second!
->
-> This means that to achieve 1 bit lores video at 30FPS we need a compression
-> ratio of 97%. I couldn't pull off more than around 25% image compression last
-> time for 3D VIP'r Maze...
+#### Calculating the odds
+
+An uncompressed image of 64 x 32 pixels (in "lores" mode) is 256 bytes. The
+entire Bad Apple video consists of 6562 frames at 30FPS. 6562 x 256 = 1679872
+bytes, or one megabyte of data. That's 26 times the memory we have available.
+
+Calculating from the other end: The whole video is 3 minutes and 39 seconds.
+That's a little under 300 bytes per second. Not per frame, per second!
+
+This means that to achieve 1 bit "lores" video at 30FPS we need a compression
+ratio of 97%. I couldn't pull off more than around 25% image compression last
+year for [3D VIP'r Maze](https://github.com/Timendus/3d-vipr-maze)...
 
 And keep in mind that we also need some storage left for program code and music.
-
 So that's going to be an insanely tight squeeze. This project is probably doomed
 from the start 😄
+
+#### The sound part
 
 To improve my odds a bit, I asked Kouzeru (who made the XO-tracker last year) if
 he would be interested in joining me on this project for the music part. I enjoy
@@ -43,11 +46,12 @@ could pull off something cool here.
 
 ### Looking at the bright side
 
-There are a couple of reasons why this may be doable, even though our
+There are a couple of reasons why this may be doable, even though my
 calculations say otherwise.
 
-1. We don't need 30FPS to give the impression of fluid motion, a variable number
-   of frames per second may be more appropriate;
+1. We don't need 30 FPS to give the impression of fluid motion; 10 or 15 FPS
+   could be fine, or maybe a variable number of frames per second may be more
+   appropriate;
 2. Our compression doesn't need to be lossless, we can have a few messed up
    pixels in some frames;
 3. The Bad Apple video is special in the sense that it has large swaths of the
@@ -171,7 +175,8 @@ unrelated song, it's nice to see all the bits and pieces come together. The
 whole thing now needs to run at "Ludicrous Speed" in Octo, but that's okay, it's
 not trying to be subtle 😄
 
-All in all, this was a fairly simple and painless part of this project!
+All in all, this was a fairly simple and painless part of this project! Huge
+kudos to Kouzeru for making this drop-in music player!
 
 ### Ready, set, go!
 
@@ -298,3 +303,45 @@ Now the trick that makes this lossy is that we don't try to have every possible
 sprite in our dictionary, but we filter the list based on some criteria to come
 to a subset that is "close enough" to draw an approximation of the frames with.
 And herein lies the hard part.
+
+After writing a couple of different "distance between two sprites" algorithms to
+try to generate a dictionary of sprites that differ as much as possible, and
+then find the closest match to a sprite in the dictionary when encoding, I had
+something that clearly kinda worked.
+
+But... I didn't like the lossy effect at all:
+
+![The video with the spriting encoder](./pictures/sprited.gif)
+
+It generated so much noise that the video was a mess. Increasing the number of
+sprites in the global dictionary clearly would have made the video better, but
+because I would have had to use more bits for my sprite indices, and also store
+more sprites, the compression would have been much worse. In the video above I
+have limited the encoder to do no more than two sprited frames in a row, but
+still the effect is way too messy. The compression was pretty nice though: this
+version has a compression of 79.6%!
+
+Missing a couple of pixels here and there is fine, but missing whole bands and
+blobs of pixels quickly makes the image unrecognizable when you have so few
+pixels on the screen to begin with.
+
+So after investing a ton of time into this encoder and decoder, I decided that
+this was not the way forward.
+
+### The music arrives! 🎹
+
+To cheer me up though, Kouzeru sent me his tracker arrangement of the Bad Apple
+song, and it was absolutely amazing! The man is a genius with 1-bit sound 😄
+
+The song was quite a bit larger than the test song I had been using though, so I
+lost some more storage space in the process of putting the new song in. But
+that's very acceptable given how amazing the song sounds!
+
+### Huffman trees
+
+So having tried all of my three big ideas, I'm basically back to square one. But
+armed with more knowledge, and a better understanding of what I'm looking for
+now:
+
+  * Lossy is fine for a couple of pixels in some frames, but no more
+  * We need to squeeze more pixels into fewer bits
