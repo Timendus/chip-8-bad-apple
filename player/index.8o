@@ -128,13 +128,16 @@
 
 : safe-storage
   0 0 0 0 0
+: safe-storage2
+  0 0 0 0
 
 #include "music/player.8o"
 #include "music/song.8o"
 
 #include "decoder.8o"
-#include "dictionary.8o"
-#include "frames.8o"
+#include "huffman.8o"
+#include "codebook.8o"
 
+#include "frames.8o"
 #data
 : the-end  # So we know when we're out of frames

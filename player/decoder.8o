@@ -12,9 +12,6 @@
 # Decode the next frame, pointed to by i
 # v0 must hold the settings byte of this frame
 : decode
-  v1 := 0xE0
-  v1 &= v0
-  if v1 == 0 then jump spriting-decode
   v1 := 128
   v1 &= v0          # Clear screen?
   if v1 != 0 then clear
@@ -55,21 +52,23 @@
   v1 := 64
   v1 &= v0          # RLE enabled?
   if v1 != 0 then jump rle-decode
-  # Else: Fall through to plain-copy
+  # Else: Fall through to Huffman decode
 
-# XOR the data at i directly to the screen
-# Don't mess up vB - vE, make sure we update frame pointer
-: plain-copy
-  loop
-    sprite X Y 1
-    vF := 1
-    i += vF
-    vF := 1
-    update-frame-pointer
-    next-coordinate
-    if Y != height then
-  again
-  return
+  jump huffman-decode
+
+# # XOR the data at i directly to the screen
+# # Don't mess up vB - vE, make sure we update frame pointer
+# : plain-copy
+#   loop
+#     sprite X Y 1
+#     vF := 1
+#     i += vF
+#     vF := 1
+#     update-frame-pointer
+#     next-coordinate
+#     if Y != height then
+#   again
+#   return
 
 # Do the RLE decoding
 # i points to the first run length
@@ -125,42 +124,42 @@
   Y += 1
   return
 
-# Do the sprite-based decoding
-# i points to the sprite data
-# Don't mess up vB - vE, make sure we update frame pointer
-: spriting-decode
-  load v4 - v4   # This load doesn't post-increment in XO-CHIP
-  vF := 1
-  i += vF
-  vF := 1
-  update-frame-pointer
-  loop
-    load v1
-    #if SCHIP
-      vF := 2
-      i += vF
-    #end
-    # Decode frame pointer
-    i := long dictionary
-    i += v1  i += v1  i += v1  i += v1
-    i += v1  i += v1  i += v1  i += v1
-    # Decode coordinates
-    v1 := 0xF
-    v1 &= v0
-    v1 <<= v1  v1 <<= v1  v1 <<= v1
-    vF := 0xF0
-    v0 &= vF
-    v0 >>= v0
-    vF := 8
-    v0 += vF
-    # Sprite!
-    sprite v0 v1 8
-
-    # Prepare for next sprite
-    vF := 2
-    update-frame-pointer
-    get-frame-pointer
-    v4 -= 1
-    if v4 != 0 then
-  again
-  return
+# # Do the sprite-based decoding
+# # i points to the sprite data
+# # Don't mess up vB - vE, make sure we update frame pointer
+# : spriting-decode
+#   load v4 - v4   # This load doesn't post-increment in XO-CHIP
+#   vF := 1
+#   i += vF
+#   vF := 1
+#   update-frame-pointer
+#   loop
+#     load v1
+#     #if SCHIP
+#       vF := 2
+#       i += vF
+#     #end
+#     # Decode frame pointer
+#     i := long dictionary
+#     i += v1  i += v1  i += v1  i += v1
+#     i += v1  i += v1  i += v1  i += v1
+#     # Decode coordinates
+#     v1 := 0xF
+#     v1 &= v0
+#     v1 <<= v1  v1 <<= v1  v1 <<= v1
+#     vF := 0xF0
+#     v0 &= vF
+#     v0 >>= v0
+#     vF := 8
+#     v0 += vF
+#     # Sprite!
+#     sprite v0 v1 8
+#
+#     # Prepare for next sprite
+#     vF := 2
+#     update-frame-pointer
+#     get-frame-pointer
+#     v4 -= 1
+#     if v4 != 0 then
+#   again
+#   return

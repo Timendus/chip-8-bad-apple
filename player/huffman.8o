@@ -1,0 +1,142 @@
+:alias bitpointer v1
+:alias temp v0
+
+:alias value-hi v7
+:alias value-lo v8
+:alias code-hi v4
+:alias code-lo v5
+
+:alias numToGo v3
+:alias bitsLength v9
+:alias index vA
+:alias bits v6
+
+:alias mask-hi vB
+:alias mask-lo vC
+:alias temp2 vD
+:alias temp3 vE
+
+# Don't mess up v2 - v6 and vB - vE, make sure we update frame pointer
+: huffman-decode
+  bitpointer := 0 # Value 0 - 7 that tells us the bit offset
+  loop
+    # Free up a couple of registers
+    i := safe-storage
+    save v2 - v6
+    i := safe-storage2
+    save vB - vE
+
+    # Load the bits to decode from the compressed data
+    get-frame-pointer  # Point i to current data byte
+    load v7 - v9
+    # Shift the three loaded bytes so the first bit is the next value to decode
+    if bitpointer != 0 begin
+      temp := bitpointer
+      loop
+        v7 <<= v7
+        v8 <<= v8
+        v7 += vF
+        v9 <<= v9
+        v8 += vF
+        temp -= 1
+        if temp != 0 then
+      again
+    end
+    # v7 and v8 (value-hi and value-lo) now hold the next 16 bits to decode,
+    # v0 and v9 are free again
+
+    # Now we start the search for the right value given these 16 bits
+    i := long huffman-codebook
+    load temp
+    bitsLength := temp
+    index := 1
+    code-hi := 0
+    code-lo := 0
+
+    bits := 1
+    mask-hi := 128
+    mask-lo := 0
+    loop
+      i := long huffman-codebook
+      i += bits
+      load temp
+      numToGo := temp
+      loop
+        while numToGo != 0
+        numToGo -= 1
+        # Compare first 'bits' bits of 'value' to 'code' (can maybe be optimized further)
+        temp := 16
+        temp -= bits
+        temp2 := code-hi
+        temp3 := code-lo
+        if temp != 0 begin
+          loop
+            temp2 <<= temp2
+            temp3 <<= temp3
+            temp2 += vF
+            temp -= 1
+            if temp != 0 then
+          again
+        end
+        temp := value-hi
+        temp &= mask-hi
+        if temp == temp2 begin
+          temp := value-lo
+          temp &= mask-lo
+          if temp == temp3 then jump huffman-decode-continue
+        end
+        index += 1
+        vF := 1
+        code-lo += vF
+        code-hi += vF
+      again
+      # code <<= 1
+      code-hi <<= code-hi
+      code-lo <<= code-lo
+      code-hi += vF
+
+      # Fill up mask
+      mask-lo >>= mask-lo
+      mask-hi >>= mask-hi
+      if vF != 0 then mask-lo += 128
+      mask-hi += 128
+
+      bits += 1
+      if bits <= bitsLength then
+    again
+
+    # We should never get here. If we do, that's an error in the data
+    loop again
+
+: huffman-decode-continue
+    # Restore these registers so we can update the frame pointer
+    i := safe-storage2
+    load vB - vE
+    # How many bits have we processed?
+    bitpointer += bits
+    # Have we processed so many bits that we can update the frame pointer?
+    loop
+      while bitpointer > 7
+      bitpointer -= 8
+      vF := 1
+      update-frame-pointer
+    again
+
+    # Restore these registers so we can use and update the screen coordinates
+    i := safe-storage
+    load v2 - v6
+
+    # Point i to the correct byte, show it on screen
+    i := long huffman-codebook
+    i += bitsLength
+    i += index
+    sprite X Y 1
+
+    # Update screen location and check if we're done
+    next-coordinate
+    if Y != height then
+  again
+
+  vF := 1
+  update-frame-pointer
+  return
