@@ -16,7 +16,7 @@ const FRAME_STEP    = 2;
 const TARGET_WIDTH  = 48;   // Should be divisible by 8
 const TARGET_HEIGHT = 32;
 
-const MAX_SIZE = 58400;
+const MAX_SIZE = 59931;
 const NUM_PIXELS_CONSIDERED_NO_CHANGE = 0;  // Didn't like this effect, so disabled
 const SPRITING_DIFFERENCE_ALLOWED = 0.2030;
 // 0.1954 happens to lead to 256 unique sprites when applied to all frames
@@ -260,10 +260,12 @@ console.log(`${globalCodebook.length} entries in the global Huffman codebook, to
 
 const totalSize = Math.ceil(output/(FRAME_END-FRAME_START+1)*6562);
 const additionalSize = dictionary.length * 8 + huffman.encodeCodebook(globalCodebook).length;
-console.log(`\nTOTAL SIZE: ${output + additionalSize} bytes`);
-console.log(`--> Guess extrapolation to the total video at 15FPS: ${totalSize + additionalSize} bytes ${(totalSize + additionalSize) > MAX_SIZE ? `(${(totalSize + additionalSize) - MAX_SIZE} bytes (${Math.round(((totalSize + additionalSize) - MAX_SIZE)/totalSize*1000)/10}%) too much 😢)` : `-- We may have made it! 🎉`}`)
+const settingsBytes = frames.length;
+const totalSettingsBytes = (FRAME_END-FRAME_START+1)/FRAME_STEP*1;
+console.log(`\nTOTAL OUTPUT SIZE: ${output + settingsBytes + additionalSize} bytes (${(output + settingsBytes + additionalSize) < MAX_SIZE ? 'fits' : `doesn't fit`})`);
+console.log(`--> Guess extrapolation to the total video at 15FPS: ${totalSize + totalSettingsBytes + additionalSize} bytes ${(totalSize + totalSettingsBytes + additionalSize) > MAX_SIZE ? `(${(totalSize + totalSettingsBytes + additionalSize) - MAX_SIZE} bytes (${Math.round(((totalSize + totalSettingsBytes + additionalSize) - MAX_SIZE)/totalSize*1000)/10}%) too much 😢)` : `-- We may have made it! 🎉`}`)
 
-if ( FRAME_START == 1 && FRAME_END == 6562 && output + additionalSize < MAX_SIZE ) {
+if ( FRAME_START == 1 && FRAME_END == 6562 && output + settingsBytes + additionalSize < MAX_SIZE ) {
   console.log(`\n🎉 We really made it! 😄`)
 }
 
