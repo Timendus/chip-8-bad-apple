@@ -374,7 +374,7 @@ function render(image) {
 function formatForOcto(image) {
   let output = "";
   let offset = 0;
-  const stride = 32;
+  const stride = 16;
   for ( let i = 0; i < image.length; i += stride ) {
     const line = image.slice(i, i + stride)
                       .map(v => '0x' + v.toString(16).padStart(2, '0'))
