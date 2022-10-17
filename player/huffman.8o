@@ -13,8 +13,8 @@
 
 :alias mask-hi vB
 :alias mask-lo vC
-:alias temp2 vD
-:alias temp3 vE
+:alias addition-hi vD
+:alias addition-lo vE
 
 # Don't mess up v2 - v6 and vB - vE, make sure we update frame pointer
 : huffman-decode
@@ -45,57 +45,45 @@
 
     # Now we start the search for the right value given these 16 bits
     i := long huffman-codebook
-    load temp
-    bitsLength := temp
+    load bitsLength - bitsLength
+    bits := 1
     index := 1
     code-hi := 0
     code-lo := 0
-
-    bits := 1
     mask-hi := 128
     mask-lo := 0
+    addition-hi := 128
+    addition-lo := 0
     loop
       i := long huffman-codebook
       i += bits
-      load temp
-      numToGo := temp
+      load numToGo - numToGo
       loop
         while numToGo != 0
         numToGo -= 1
-        # Compare first 'bits' bits of 'value' to 'code' (can maybe be optimized further)
-        temp := 16
-        temp -= bits
-        temp2 := code-hi
-        temp3 := code-lo
-        loop
-          while temp != 0
-          temp -= 1
-          temp2 <<= temp2
-          temp3 <<= temp3
-          temp2 += vF
-        again
-        temp := value-hi
+        # Compare first 'bits' bits of 'value' to 'code'
+        temp := code-hi
+        temp ^= value-hi
         temp &= mask-hi
-        if temp == temp2 begin
-          temp := value-lo
+        if temp == 0 begin
+          temp := code-lo
+          temp ^= value-lo
           temp &= mask-lo
-          if temp == temp3 then jump huffman-decode-continue
+          if temp == 0 then jump huffman-decode-found-value
         end
         index += 1
-        vF := 1
-        code-lo += vF
+        code-hi += addition-hi
+        code-lo += addition-lo
         code-hi += vF
       again
-      # code <<= 1
-      code-hi <<= code-hi
-      code-lo <<= code-lo
-      code-hi += vF
+      # "code <<= 1", but done by adding a lower value to it
+      addition-lo >>= addition-lo
+      addition-hi >>= addition-hi
+      if vF != 0 then addition-lo += 128
 
       # Fill up mask
-      mask-lo >>= mask-lo
-      mask-hi >>= mask-hi
-      if vF != 0 then mask-lo += 128
-      mask-hi += 128
+      mask-lo += addition-lo
+      mask-hi += addition-hi
 
       bits += 1
       if bits <= bitsLength then
@@ -104,7 +92,7 @@
     # We should never get here. If we do, that's an error in the data
     loop again
 
-: huffman-decode-continue
+: huffman-decode-found-value
     # Restore these registers so we can update the frame pointer
     i := safe-storage2
     load vB - vE
