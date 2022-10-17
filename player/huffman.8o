@@ -30,18 +30,16 @@
     get-frame-pointer  # Point i to current data byte
     load v7 - v9
     # Shift the three loaded bytes so the first bit is the next value to decode
-    if bitpointer != 0 begin
-      temp := bitpointer
-      loop
-        v7 <<= v7
-        v8 <<= v8
-        v7 += vF
-        v9 <<= v9
-        v8 += vF
-        temp -= 1
-        if temp != 0 then
-      again
-    end
+    temp := bitpointer
+    loop
+      while temp != 0
+      temp -= 1
+      v7 <<= v7
+      v8 <<= v8
+      v7 += vF
+      v9 <<= v9
+      v8 += vF
+    again
     # v7 and v8 (value-hi and value-lo) now hold the next 16 bits to decode,
     # v0 and v9 are free again
 
@@ -69,15 +67,13 @@
         temp -= bits
         temp2 := code-hi
         temp3 := code-lo
-        if temp != 0 begin
-          loop
-            temp2 <<= temp2
-            temp3 <<= temp3
-            temp2 += vF
-            temp -= 1
-            if temp != 0 then
-          again
-        end
+        loop
+          while temp != 0
+          temp -= 1
+          temp2 <<= temp2
+          temp3 <<= temp3
+          temp2 += vF
+        again
         temp := value-hi
         temp &= mask-hi
         if temp == temp2 begin
