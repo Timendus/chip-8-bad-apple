@@ -95,6 +95,7 @@ const uniquePosValues = [...new Set(possibleValues)].sort((a,b) => a - b);
 for ( let i = 0; i < 256; i++ )
   if ( !uniquePosValues.includes(i) ) possibleValues.push(i);
 const [globalMappings, globalCodebook] = huffman.createLimitedCodebook(possibleValues, maxBits);
+console.log(`We have ${Object.keys(globalMappings).length} bytes that we can't perfectly store`);
 const foundMaxBits = Math.max(...globalCodebook.map(v => v[1].length));
 const numTooLarge = globalCodebook.filter(v => v[1].length > maxBits).length;
 if ( foundMaxBits > maxBits ) throw `Found ${numTooLarge} entries in the Huffman codebook that encode to too many bits. Longest value is ${foundMaxBits} bits. Can't handle more than ${maxBits}.`
@@ -110,6 +111,7 @@ for ( const f of Object.keys(movie) ) {
   frame.RLE = rleEncode(frame.input);
   frame.huffman = huffman.encodeWithCodebook(frame.input);
   frame.globalHuffman = huffman.encode(frame.input, globalCodebook, globalMappings);
+  frame.globalHuffmanDecoded = huffman.decode(frame.globalHuffman, globalCodebook).slice(0, frame.input.length).map(v => +v);
   frame.RLEHuffman = huffman.encodeWithCodebook(frame.RLE);
   frame.boundingBox = getBoundingBox(frame.input);
   if ( frame.boundingBox.slice.length > 0 ) {
@@ -117,29 +119,26 @@ for ( const f of Object.keys(movie) ) {
     frame.bboxRLE = [...frame.boundingBox.encoded, ...rleEncode(frame.boundingBox.slice)];
     frame.bboxHuffman = [...frame.boundingBox.encoded, ...huffman.encodeWithCodebook(frame.boundingBox.slice)];
     frame.bboxGlobalHuffman = [...frame.boundingBox.encoded, ...huffman.encode(frame.boundingBox.slice, globalCodebook, globalMappings)];
+    frame.bboxGlobalHuffmanDecoded = decodeBoundingBox(
+      new Array(TARGET_WIDTH * TARGET_HEIGHT / 8),
+      frame.bboxGlobalHuffman.slice(0, 2),
+      huffman.decode(frame.bboxGlobalHuffman.slice(2), globalCodebook).map(v => +v)
+    );
   }
 
-  // Validate Huffman encoding
+  // Validate my Huffman algorithms
   const decoded = huffman.decodeWithCodebook(frame.huffman).slice(0, frame.input.length);
   assert(
     decoded.every((v,i) => v == frame.input[i]),
     `Decoded does not match input for frame ${frame.id}.\n\nGot decoded ${JSON.stringify(decoded)}\n\nExpected input ${JSON.stringify(frame.input)}\n`
   );
-  const globalDecoded = huffman.decode(frame.globalHuffman, globalCodebook)
-                               .slice(0, frame.input.length)
-                               .map(v => +v);
-  const numPixelsChanged = spriting.difference(globalDecoded, frame.input);
-  if ( numPixelsChanged > 0 ) console.log(`Warning: Frame ${frame.id} has ${numPixelsChanged} pixels difference with original in global Huffman encoding`);
-  // assert(
-  //   numPixelsChanged < 3,
-  //   `Decoded (with global codebook) does not match input for frame ${frame.id}.\n\nGot decoded ${JSON.stringify(globalDecoded)}\n\nExpected input ${JSON.stringify(frame.input)}\n`
-  // );
 
   if ( f > FRAME_START ) {
     frame.diff = frame.input.map((v, i) => v ^ movie[prev].output[i]);
     frame.diffRLE = rleEncode(frame.diff);
     frame.diffHuffman = huffman.encodeWithCodebook(frame.diff);
     frame.diffGlobalHuffman = huffman.encode(frame.diff, globalCodebook, globalMappings);
+    frame.diffGlobalHuffmanDecoded = huffman.decode(frame.diffGlobalHuffman, globalCodebook).slice(0, frame.input.length).map(v => +v).map((v, i) => v ^ movie[prev].output[i]);
     // frame.sprited = spriting.encode(movie[prev].output, frame.input, frame.diff, TARGET_WIDTH, TARGET_HEIGHT, dictionary);
     frame.boundingBox = getBoundingBox(frame.diff);
     if ( frame.boundingBox.slice.length > 0 ) {
@@ -147,6 +146,12 @@ for ( const f of Object.keys(movie) ) {
       frame.diffBboxRLE = [...frame.boundingBox.encoded, ...rleEncode(frame.boundingBox.slice)];
       frame.diffBboxHuffman = [...frame.boundingBox.encoded, ...huffman.encodeWithCodebook(frame.boundingBox.slice)];
       frame.diffBboxGlobalHuffman = [...frame.boundingBox.encoded, ...huffman.encode(frame.boundingBox.slice, globalCodebook, globalMappings)];
+      frame.diffBboxGlobalHuffmanDecoded = decodeBoundingBox(
+        prev ? movie[prev].output : new Array(TARGET_WIDTH * TARGET_HEIGHT / 8),
+        frame.diffBboxGlobalHuffman.slice(0, 2),
+        huffman.decode(frame.diffBboxGlobalHuffman.slice(2), globalCodebook).map(v => +v),
+        true
+      );
     }
 
     frame.numChangedPixels = frame.diff.reduce((a,v) =>
@@ -175,9 +180,19 @@ for ( const f of Object.keys(movie) ) {
     frame.output = spriting.decode(movie[prev].output, TARGET_WIDTH, frame.sprited, dictionary);
   } else {
     numSprited = 0;
-    frame.output = frame.input; // Lossless
+    if ( ['globalHuffman',
+          'bboxGlobalHuffman',
+          'diffGlobalHuffman',
+          'diffBboxGlobalHuffman'].includes(frame.outputType) )
+      frame.output = frame[frame.outputType + 'Decoded'];
+    else
+      frame.output = frame.input; // Lossless
   }
-  // render(frame.output);
+
+  // Alert the user of frames that decode badly
+  const numPixelsChanged = spriting.difference(frame.input, frame.output);
+  if ( numPixelsChanged > 0 )
+    console.log(`Warning: Frame ${frame.id} has ${numPixelsChanged} pixels difference after decoding`);
 
   if (!frame.duplicate) prev = f;
 }
@@ -350,6 +365,27 @@ function getBoundingBox(image) {
     encoded: [(minX << 5) + minY, (maxX << 5) + maxY],
     slice
   };
+}
+
+function decodeBoundingBox(background, bbox, image, xor = false) {
+  const minX = bbox[0] >> 5;
+  const maxX = bbox[1] >> 5;
+  const minY = bbox[0] & 0x1F;
+  const maxY = bbox[1] & 0x1F;
+
+  const result = [];
+  for ( let y = 0; y < TARGET_HEIGHT; y++ ) {
+    for ( let x = 0; x < TARGET_WIDTH / 8; x++ ) {
+      if ( x >= minX && x <= maxX && y >= minY && y <= maxY )
+        if ( xor )
+          result.push((background[y * (TARGET_WIDTH / 8) + x] || 0) ^ image[(y - minY) * (maxX - minX + 1) + (x - minX)]);
+        else
+          result.push(image[(y - minY) * (maxX - minX + 1) + (x - minX)]);
+      else
+        result.push(background[y * (TARGET_WIDTH / 8) + x] || 0);
+    }
+  }
+  return result;
 }
 
 // Outputs the one bit per pixel image data from scaleAndReduce to the console.
