@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "chipcode": "../../chipcode",
-    "octo-assembler": "^0.1.3",
+    "octo-assembler": "^0.1.4",
     "pngjs": "^6.0.0"
   }
 }
