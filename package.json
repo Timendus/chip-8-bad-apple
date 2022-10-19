@@ -3,6 +3,7 @@
   "scripts": {
     "scale": "magick mogrify -path ./frames/scaled/ -resize 48x32^ -gravity center -extent 48x32 -threshold 50% -quality 100 ./frames/original/*.png",
     "encode": "./encoder/index.js",
+    "encode2": "./encoder/index2.js",
     "build": "octopus player/index.8o bin/bad-apple.8o && cat bin/bad-apple.8o | pbcopy",
     "build-all": "npm run build && npm run build-binary && npm run build-html",
     "build-binary": "npm run build && octo bin/bad-apple.8o bin/bad-apple.ch8",
