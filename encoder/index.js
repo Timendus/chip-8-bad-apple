@@ -47,41 +47,46 @@ const movie = {}
 
 /* Load in all the frame images */
 
+let secondToLastImage = false;
 let lastImage = false;
-for ( let i = FRAME_START; i <= FRAME_END; i+=FRAME_STEP ) {
+let interlacing = 0;
+for ( let i = FRAME_START; i <= FRAME_END; i += FRAME_STEP ) {
   const id = i < 1000 ? String(i).padStart(3, '0') : i;
   const file = `frames/scaled/bad_apple_${id}.png`;
   const fileData = fs.readFileSync(file);
   const png = PNG.sync.read(fileData);
-  const image = reduceTo1Bit(png.data);
-  const diff = lastImage ? image.map((v, i) => v ^ lastImage[i]) : undefined;
+  const image = reduceTo1Bit(png.data).filter((v, i) => Math.floor(i / (TARGET_WIDTH / 8)) % 2 == interlacing);
+  interlacing ^= 1;
+  const diff = secondToLastImage ? image.map((v, i) => v ^ secondToLastImage[i]) : false;
   movie[i] = {
     id,
     input: image,
-    sprites: lastImage ? spriting.chopUp(diff, TARGET_WIDTH, TARGET_HEIGHT) : undefined,
+    initial: i == FRAME_START || i == FRAME_START + FRAME_STEP,
+    // sprites: lastImage ? spriting.chopUp(diff, TARGET_WIDTH, TARGET_HEIGHT) : undefined,
     frames: 1,
-    outputType: 'input',
-    diff: i == FRAME_START ? false : image.map((v, n) => v ^ movie[i - FRAME_STEP].input[n]) // Assume lossless
+    // outputType: 'input',
+    diff //: i == FRAME_START ? false : image.map((v, n) => v ^ movie[i - FRAME_STEP].input[n]) // Assume lossless
   };
+  secondToLastImage = lastImage;
   lastImage = image;
 }
 
 /* Determine the dictionary of unique sprites to use */
 
-const uniqueSprites = spriting.nonEmpty(
-  spriting.uniqueSprites(
-    Object.values(movie)
-          .map(f => f.sprites)
-          .filter(f => f)
-          .flat()
-  )
-);
+// const uniqueSprites = spriting.nonEmpty(
+//   spriting.uniqueSprites(
+//     Object.values(movie)
+//           .map(f => f.sprites)
+//           .filter(f => f)
+//           .flat()
+//   )
+// );
 // const dictionary = spriting.differingSprites(uniqueSprites, SPRITING_DIFFERENCE_ALLOWED);
 const dictionary = [];
 // console.log(spriting.renderSprites(dictionary));
 
-console.log(`Video has ${uniqueSprites.length} unique sprites`);
-console.log(`Video has ${dictionary.length} sprites that differ more than ${SPRITING_DIFFERENCE_ALLOWED}`);
+// console.log(`Video has ${uniqueSprites.length} unique sprites`);
+// console.log(`Video has ${dictionary.length} sprites that differ more than ${SPRITING_DIFFERENCE_ALLOWED}`);
 
 if ( dictionary.length > 256 ) throw 'dictionary size too large to fit in 8 bits';
 
@@ -104,36 +109,34 @@ if ( foundMaxBits > maxBits ) throw `Found ${numTooLarge} entries in the Huffman
 
 const nibbleLookup = [0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4];
 let prev = false;
+let pprev = false;
 let numSprited = 0;
 for ( const f of Object.keys(movie) ) {
   const frame = movie[f];
 
-  frame.RLE = rleEncode(frame.input);
-  frame.huffman = huffman.encodeWithCodebook(frame.input);
-  frame.globalHuffman = huffman.encode(frame.input, globalCodebook, globalMappings);
-  frame.globalHuffmanDecoded = huffman.decode(frame.globalHuffman, globalCodebook).slice(0, frame.input.length).map(v => +v);
-  frame.RLEHuffman = huffman.encodeWithCodebook(frame.RLE);
-  frame.boundingBox = getBoundingBox(frame.input);
-  if ( frame.boundingBox.slice.length > 0 ) {
-    frame.bbox = [...frame.boundingBox.encoded, ...frame.boundingBox.slice];
-    frame.bboxRLE = [...frame.boundingBox.encoded, ...rleEncode(frame.boundingBox.slice)];
-    frame.bboxHuffman = [...frame.boundingBox.encoded, ...huffman.encodeWithCodebook(frame.boundingBox.slice)];
-    frame.bboxGlobalHuffman = [...frame.boundingBox.encoded, ...huffman.encode(frame.boundingBox.slice, globalCodebook, globalMappings)];
-    frame.bboxGlobalHuffmanDecoded = decodeBoundingBox(
-      new Array(TARGET_WIDTH * TARGET_HEIGHT / 8),
-      frame.bboxGlobalHuffman.slice(0, 2),
-      huffman.decode(frame.bboxGlobalHuffman.slice(2), globalCodebook).map(v => +v)
-    );
+  if ( frame.initial ) {
+    frame.outputType = 'RLE';
+    frame.RLE = rleEncode(frame.input);
+    frame.huffman = huffman.encodeWithCodebook(frame.input);
+    frame.globalHuffman = huffman.encode(frame.input, globalCodebook, globalMappings);
+    frame.globalHuffmanDecoded = huffman.decode(frame.globalHuffman, globalCodebook).slice(0, frame.input.length).map(v => +v);
+    frame.RLEHuffman = huffman.encodeWithCodebook(frame.RLE);
+    frame.boundingBox = getBoundingBox(frame.input);
+    if ( frame.boundingBox.slice.length > 0 ) {
+      frame.bbox = [...frame.boundingBox.encoded, ...frame.boundingBox.slice];
+      frame.bboxRLE = [...frame.boundingBox.encoded, ...rleEncode(frame.boundingBox.slice)];
+      frame.bboxHuffman = [...frame.boundingBox.encoded, ...huffman.encodeWithCodebook(frame.boundingBox.slice)];
+      frame.bboxGlobalHuffman = [...frame.boundingBox.encoded, ...huffman.encode(frame.boundingBox.slice, globalCodebook, globalMappings)];
+      frame.bboxGlobalHuffmanDecoded = decodeBoundingBox(
+        new Array(frame.input.length),
+        frame.bboxGlobalHuffman.slice(0, 2),
+        huffman.decode(frame.bboxGlobalHuffman.slice(2), globalCodebook).map(v => +v)
+      );
+    }
   }
 
-  // Validate my Huffman algorithms
-  const decoded = huffman.decodeWithCodebook(frame.huffman).slice(0, frame.input.length);
-  assert(
-    decoded.every((v,i) => v == frame.input[i]),
-    `Decoded does not match input for frame ${frame.id}.\n\nGot decoded ${JSON.stringify(decoded)}\n\nExpected input ${JSON.stringify(frame.input)}\n`
-  );
-
-  if ( f > FRAME_START ) {
+  if ( !frame.initial ) {
+    frame.outputType = 'diffRLE';
     frame.diff = frame.input.map((v, i) => v ^ movie[prev].output[i]);
     frame.diffRLE = rleEncode(frame.diff);
     frame.diffHuffman = huffman.encodeWithCodebook(frame.diff);
@@ -147,7 +150,7 @@ for ( const f of Object.keys(movie) ) {
       frame.diffBboxHuffman = [...frame.boundingBox.encoded, ...huffman.encodeWithCodebook(frame.boundingBox.slice)];
       frame.diffBboxGlobalHuffman = [...frame.boundingBox.encoded, ...huffman.encode(frame.boundingBox.slice, globalCodebook, globalMappings)];
       frame.diffBboxGlobalHuffmanDecoded = decodeBoundingBox(
-        prev ? movie[prev].output : new Array(TARGET_WIDTH * TARGET_HEIGHT / 8),
+        prev ? movie[prev].output : new Array(frame.input.length),
         frame.diffBboxGlobalHuffman.slice(0, 2),
         huffman.decode(frame.diffBboxGlobalHuffman.slice(2), globalCodebook).map(v => +v),
         true
@@ -164,6 +167,13 @@ for ( const f of Object.keys(movie) ) {
       movie[prev].frames++;
       assert(movie[prev].frames < 32, `Number of frames to merge is less than 32`);
     }
+
+    // Validate my Huffman algorithms
+    const decoded = huffman.decodeWithCodebook(frame.diffHuffman).slice(0, frame.input.length);
+    assert(
+      decoded.every((v,i) => v == frame.diff[i]),
+      `Decoded does not match input for frame ${frame.id}.\n\nGot decoded ${JSON.stringify(decoded)}\n\nExpected input ${JSON.stringify(frame.diff)}\n`
+    );
   }
 
   // Find encoding method with the shortest output
@@ -194,7 +204,14 @@ for ( const f of Object.keys(movie) ) {
   if ( numPixelsChanged > 0 )
     console.log(`Warning: Frame ${frame.id} has ${numPixelsChanged} pixels difference after decoding`);
 
-  if (!frame.duplicate) prev = f;
+  // Make sure I didn't mess this up
+  assert(frame.output.length == frame.input.length, `Output size (${frame.output.length}) should equal input size (${frame.input.length} bytes) for frame ${frame.id}`);
+  assert(frame.outputType != 'input', `Why is this thing not choosing a more suitable encoding?\n\n${JSON.stringify(frame)}\n\n${methods.map(method => `${method}: ${frame[method]?.length} bytes`).join('\n')}`);
+
+  if ( !frame.duplicate ) {
+    prev = pprev;
+    pprev = f;
+  }
 }
 
 /* Output the resulting frame data to file */
@@ -204,12 +221,12 @@ const decodeRLE   = 1 << 6;
 const useBbox     = 1 << 5;
 
 const encodings = {
-  // 'input':                 clearScreen,
-  'RLE':                    clearScreen + decodeRLE,
-  'globalHuffman':          clearScreen,
-  // 'bbox':                  clearScreen + useBbox,
-  'bboxRLE':                clearScreen + useBbox + decodeRLE,
-  'bboxGlobalHuffman':      clearScreen + useBbox,
+  // 'input':                 0,
+  'RLE':                    decodeRLE,
+  'globalHuffman':          0,
+  // 'bbox':                  useBbox,
+  'bboxRLE':                useBbox + decodeRLE,
+  'bboxGlobalHuffman':      useBbox,
   'diffRLE':                decodeRLE,
   'diffGlobalHuffman':      0,
   // 'diffBbox':              useBbox,
@@ -223,7 +240,7 @@ fs.writeFileSync('player/frames.8o',
   Object.values(movie)
         .filter(v => !v.duplicate)
         .map(v => {
-          const settingsByte = encodings[v.outputType] + (v.frames - 1);
+          const settingsByte = encodings[v.outputType] + (v.frames - 1) + (v.id == FRAME_START ? clearScreen : 0);
           return (
             `: bad_apple_${v.id} # ${v.outputType}\n` +
             `  0x${(settingsByte).toString(16).padStart(2, '0')}\n` +
@@ -362,7 +379,7 @@ function getBoundingBox(image) {
     maxX: maxX * 8,
     minY,
     maxY,
-    encoded: [(minX << 5) + minY, (maxX << 5) + maxY],
+    encoded: [(minX << 5) + minY * 2, (maxX << 5) + maxY * 2],
     slice
   };
 }
@@ -370,11 +387,12 @@ function getBoundingBox(image) {
 function decodeBoundingBox(background, bbox, image, xor = false) {
   const minX = bbox[0] >> 5;
   const maxX = bbox[1] >> 5;
-  const minY = bbox[0] & 0x1F;
-  const maxY = bbox[1] & 0x1F;
+  const minY = (bbox[0] & 0x1F) / 2;
+  const maxY = (bbox[1] & 0x1F) / 2;
+  const height = background.length / (TARGET_WIDTH / 8);
 
   const result = [];
-  for ( let y = 0; y < TARGET_HEIGHT; y++ ) {
+  for ( let y = 0; y < height; y++ ) {
     for ( let x = 0; x < TARGET_WIDTH / 8; x++ ) {
       if ( x >= minX && x <= maxX && y >= minY && y <= maxY )
         if ( xor )
@@ -391,7 +409,8 @@ function decodeBoundingBox(background, bbox, image, xor = false) {
 // Outputs the one bit per pixel image data from scaleAndReduce to the console.
 function render(image) {
   let offset = 0;
-  for ( let y = 0; y < TARGET_HEIGHT; y++ ) {
+  const height = image.length / (TARGET_WIDTH / 8);
+  for ( let y = 0; y < height; y++ ) {
     console.log(
       image.slice(offset, offset + TARGET_WIDTH/8)
            .map(v =>

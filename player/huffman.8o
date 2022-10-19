@@ -118,7 +118,7 @@
 
     # Update screen location and check if we're done
     next-coordinate
-    if Y != height then
+    if Y < height then
   again
 
   vF := 1
