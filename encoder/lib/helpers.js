@@ -37,9 +37,34 @@ function render(image, width) {
   }
 }
 
+// Auto-load all files in this directory so we can have cleaner imports
+function autoLoad(directory, filename) {
+  const fs = require('fs');
+  const path = require('path');
+
+  const files = fs.readdirSync(directory)
+                  .filter(file => (file.indexOf('.') !== 0) && (file !== path.basename(filename)));
+
+  const allFiles = {};
+  files.forEach(file => {
+    const contents = require(path.join(directory, file));
+    let name = camelcase(file.replace('.js', '').replace(/\-/g, ' '));
+    allFiles[name] = contents;
+  });
+
+  return allFiles;
+}
+
+function camelcase(str) {
+  return str.replace(/(?:^\w|[A-Z]|\b\w)/g, (word, index) => {
+    return index == 0 ? word.toLowerCase() : word.toUpperCase();
+  }).replace(/\s+/g, '');
+}
+
 module.exports = {
   assert,
   byteDifference,
   arrayDifference,
-  render
+  render,
+  autoLoad
 };

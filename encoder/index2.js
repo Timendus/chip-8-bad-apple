@@ -1,12 +1,15 @@
 #!/usr/bin/env node
 
-const loadImages = require('./steps/load-images.js');
-const huffmanEncode = require('./steps/huffman-encode.js');
-const rleEncode = require('./steps/rle-encode.js');
-const bboxEncode = require('./steps/bbox-encode.js');
-const diff = require('./steps/diff.js');
-const selectSmallest = require('./steps/select-smallest.js');
-const generateStats = require('./steps/generate-stats.js');
+const {
+  loadImages,
+  huffmanEncode,
+  rleEncode,
+  bboxEncode,
+  diff,
+  selectSmallest,
+  generateStats
+} = require('./steps');
+
 const huffman = require('./lib/huffman.js');
 const { render } = require('./lib/helpers.js');
 
