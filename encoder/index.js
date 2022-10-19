@@ -235,7 +235,7 @@ const encodings = {
   // 'sprited':               0
 };
 
-fs.writeFileSync('player/frames.8o',
+fs.writeFileSync('player/video/frames.8o',
   '#data\n\n' +
   Object.values(movie)
         .filter(v => !v.duplicate)
@@ -254,12 +254,12 @@ if ( !Object.values(movie).some(v => !v.duplicate && v.outputType == 'sprited') 
   dictionary.splice(0, dictionary.length);
 }
 
-fs.writeFileSync('player/dictionary.8o',
+fs.writeFileSync('player/video/dictionary.8o',
   '#data\n\n: dictionary\n' +
   dictionary.map(s => formatForOcto(s)).join('')
 );
 
-fs.writeFileSync('player/codebook.8o',
+fs.writeFileSync('player/video/codebook.8o',
   '#data\n\n: huffman-codebook\n' +
   formatForOcto(huffman.encodeCodebook(globalCodebook))
 );

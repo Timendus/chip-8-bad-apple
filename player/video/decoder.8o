@@ -58,7 +58,7 @@
   if v1 != 0 then jump rle-decode
   # Else: Fall through to Huffman decode
 
-  jump huffman-decode
+#include "huffman.8o"
 
 # # XOR the data at i directly to the screen
 # # Don't mess up vB - vE, make sure we update frame pointer
