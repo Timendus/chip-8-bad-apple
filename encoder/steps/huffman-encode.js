@@ -8,8 +8,8 @@ module.exports = function(movie, options) {
     useGlobalCodebook: true,
     inputForCodebook: 'encoded',
     input: 'input',
+    encoded: 'encoded',
     output: 'output',
-    result: 'result',
     codebook: false,
     mappings: false
   }, options);
@@ -40,19 +40,19 @@ module.exports = function(movie, options) {
     if ( !frame[options.input] ) continue;
 
     if ( options.useGlobalCodebook ) {
-      frame[options.output] = huffman.encode(frame[options.input], options.codebook || globalCodebook, options.mappings || globalMappings);
-      frame[options.result] = huffman.decode(frame[options.output], options.codebook || globalCodebook).slice(0, frame[options.input].length);
+      frame[options.encoded] = huffman.encode(frame[options.input], options.codebook || globalCodebook, options.mappings || globalMappings);
+      frame[options.output] = huffman.decode(frame[options.encoded], options.codebook || globalCodebook).slice(0, frame[options.input].length);
 
       // Alert the user of frames that decode badly, given the limit on maxBits
-      const numChanged = arrayDifference(frame[options.input], frame[options.result]);
+      const numChanged = arrayDifference(frame[options.input], frame[options.output]);
       if ( numChanged > 0 )
         console.warn(`Warning: Frame ${frame.id} has ${numChanged} pixels difference after decoding`);
     } else {
-      frame[options.output] = huffman.encodeWithCodebook(frame[options.input]);
-      frame[options.result] = huffman.decodeWithCodebook(frame[options.output]).slice(0, frame[options.input].length);
+      frame[options.encoded] = huffman.encodeWithCodebook(frame[options.input]);
+      frame[options.output] = huffman.decodeWithCodebook(frame[options.encoded]).slice(0, frame[options.input].length);
       assert(arrayDifference(frame[options.result], frame[options.input]) == 0, `Huffman: Decoded should match input for frame ${frame.id}.\n\nGot decoded ${JSON.stringify(frame[options.result])}\n\nExpected input ${JSON.stringify(frame[options.input])}\n`);
     }
-    assert(frame[options.result].length == frame[options.input].length, `Huffman: Output size (${frame[options.result].length}) should equal input size (${frame[options.input].length} bytes) for frame ${frame.id}`);
+    assert(frame[options.output].length == frame[options.input].length, `Huffman: Output size (${frame[options.output].length}) should equal input size (${frame[options.input].length} bytes) for frame ${frame.id}`);
   }
 
   return [globalCodebook, globalMappings];

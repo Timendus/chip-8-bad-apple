@@ -18,19 +18,19 @@ const movie = [];
 
 // Load and diff all the images
 loadImages(movie, { start: 1, end: 6562 });
-diff(movie, {input: 'input', diffWith: 'input', output: 'diff'});
+diff(movie, {input: 'input', diffWith: 'input', encoded: 'diff'});
 
 // Encode the images and the diffs in many possible ways
-const [codebook, mappings] = huffmanEncode(movie, {input: 'diff', inputForCodebook: 'diff', output: 'diffGlobalHuffman'});
-huffmanEncode(movie, {input: 'input', output: 'globalHuffman', codebook, mappings});
-rleEncode(movie, {input: 'input', output: 'RLE'});
-rleEncode(movie, {input: 'diff', output: 'diffRLE'});
-bboxEncode(movie, {input: 'input', output: 'bbox'});
-bboxEncode(movie, {input: 'diff', output: 'diffBbox'});
+const [codebook, mappings] = huffmanEncode(movie, {input: 'diff', inputForCodebook: 'diff', encoded: 'diffGlobalHuffman'});
+huffmanEncode(movie, {input: 'input', encoded: 'globalHuffman', codebook, mappings});
+rleEncode(movie, {input: 'input', encoded: 'RLE'});
+rleEncode(movie, {input: 'diff', encoded: 'diffRLE'});
+bboxEncode(movie, {input: 'input', encoded: 'bbox'});
+bboxEncode(movie, {input: 'diff', encoded: 'diffBbox'});
 
 // Select the smallest encoding of the bunch
 const encodingMethods = ['globalHuffman', 'diffGlobalHuffman', 'RLE', 'diffRLE', 'bbox', 'diffBbox'];
-selectSmallest(movie, {selectFrom: encodingMethods, output: 'output'});
+selectSmallest(movie, {selectFrom: encodingMethods, encoded: 'encoded'});
 
 // Show a random frame
 console.log();

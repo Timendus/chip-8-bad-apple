@@ -2,7 +2,7 @@ module.exports = function(movie, options) {
   // Set default options
   options = Object.assign({
     selectFrom: ['input'],
-    output: 'output'
+    encoded: 'encoded'
   }, options);
 
   // Find the shortest dataset from the options for each frame
@@ -16,7 +16,7 @@ module.exports = function(movie, options) {
       }
     });
     if ( !chosenMethod ) continue;
-    frame[options.output] = frame[chosenMethod];
+    frame[options.encoded] = frame[chosenMethod];
     frame.method = chosenMethod;
   }
 };
