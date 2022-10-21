@@ -1,3 +1,5 @@
+// Implementation of the Huffman algorithm to compress data
+
 function createTree(data) {
   const frequencies = {};
   data.forEach(b => frequencies[b] = (frequencies[b] || 0) + 1);

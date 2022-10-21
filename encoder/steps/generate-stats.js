@@ -11,6 +11,7 @@ module.exports = function(movie, options) {
   const methods = {};
   let chosenSize = 0;
   let chosenPresent = 0;
+  options.methods.unshift('input');
   for ( const frame of movie ) {
     frame.inputSize = frame[options.input].length;
     frame.encodedSize = frame[frame.method].length;
@@ -60,12 +61,13 @@ module.exports = function(movie, options) {
 };
 
 function printStats(methods) {
+  const longestMethod = Math.max(...Object.keys(methods).map(method => method.length));
   for ( const method in methods ) {
     if ( methods[method].chosenPercentage ) {
       const chosenOutput = `Method chosen: ${methods[method].chosenPercentage.padStart(5, ' ')} (${methods[method].chosen})`;
-      console.log(`${method.padEnd(22, ' ')}  -  ${chosenOutput.padEnd(27, ' ')}  -  Compression ratio: ${methods[method].compressionRatio.padStart(5, ' ')}`);
+      console.log(`${method.padEnd(longestMethod, ' ')}  -  ${chosenOutput.padEnd(27, ' ')}  -  Compression ratio: ${methods[method].compressionRatio.padStart(5, ' ')}`);
     } else {
-      console.log(`${method.padEnd(22, ' ')}  -  Total size: ${methods[method].size.toString().padStart(8, ' ')} bytes   -  Compression ratio: ${methods[method].compressionRatio.padStart(5, ' ')}  (Old style: ${methods[method].oldStyleCompressionRatio})`);
+      console.log(`${method.padEnd(longestMethod, ' ')}  -  Total size: ${methods[method].size.toString().padStart(8, ' ')} bytes   -  Compression ratio: ${methods[method].compressionRatio.padStart(5, ' ')}  (Old style: ${methods[method].oldStyleCompressionRatio})`);
     }
   }
 }
