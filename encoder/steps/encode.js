@@ -23,13 +23,15 @@ module.exports = function(movie, options) {
     repeatFrames: 'repeatFrames',
     width: 48,
     height: 32,
-    render: false
+    render: false,
+    maxSize: Infinity
   }, options);
 
   // Apply all chains of encoders (and decoders) to all frames, sequentially
   let oddRow = 0;
   let display = new Array(options.width * options.height / 8).fill(0);
   let previousFrame = false;
+  let runningTotal = 0;
   for ( const frame of movie ) {
     if ( !frame[options.input] ) continue;
     assert(frame[options.input].every(v => typeof v == 'number'), `Expecting the input image to hold only numeric values for frame ${frame.id}`);
@@ -75,6 +77,12 @@ module.exports = function(movie, options) {
     display = frame[options.output];
     previousFrame = frame;
     oddRow ^= 1;
+    runningTotal += frame[options.encoded].length + 1;
+    if ( runningTotal >= options.maxSize ) {
+      console.log(`Made it to frame ${previousFrame.id} before running out of memory`);
+      frame[options.encoded] = undefined;
+      break;
+    }
   }
 
   function encode(method, data, headerSize, interlaced) {
