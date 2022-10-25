@@ -124,3 +124,71 @@
   vF := 1
   update-frame-pointer
   return
+
+# # Compute the first 100 entries in the Huffman codebook and save them to the
+# # memory below 0x200 🙈
+# 
+# :alias pc-temp v0
+# :alias pc-bits v1
+# :alias pc-code-hi v2
+# :alias pc-code-lo v3
+# 
+# :alias pc-addition-hi v4
+# :alias pc-addition-lo v5
+# 
+# :alias pc-index v6
+# :alias pc-num v7
+# :alias pc-numToGo v8
+# :alias pc-bitsLength v9
+# 
+# : huffman-precompute-table
+#   i := long huffman-codebook
+#   load pc-bitsLength - pc-bitsLength
+#   i := huffman-precompute-values
+#   load v7
+#   # pc-bits := 1
+#   # pc-code-hi := 0
+#   # pc-code-lo := 0
+#   # pc-addition-hi := 128
+#   # pc-addition-lo := 0
+#   # pc-index := 1
+#   # pc-num := 0
+#   loop
+#     i := long huffman-codebook
+#     i += pc-bits
+#     load pc-numToGo - pc-numToGo
+#     loop
+#       while pc-numToGo != 0
+#       pc-numToGo -= 1
+#       # Store bits, code and corresponding value
+#       # Fetch value
+#       i := long huffman-codebook
+#       i += pc-bitsLength
+#       i += pc-index
+#       load pc-temp
+#       i := 0
+#       i += pc-num  i += pc-num
+#       i += pc-num  i += pc-num
+#       save v3
+# 			pc-num += 1
+#       if pc-num == 128 then return
+#       pc-index += 1
+#       pc-code-hi += pc-addition-hi
+#       pc-code-hi += pc-addition-hi
+#       pc-code-lo += pc-addition-lo
+#       pc-code-hi += vF
+#     again
+#     # "code <<= 1", but done by adding a lower value to it
+#     pc-addition-lo >>= pc-addition-lo
+#     pc-addition-hi >>= pc-addition-hi
+#     if vF != 0 then pc-addition-lo += 128
+# 
+#     pc-bits += 1
+#     if pc-bits <= pc-bitsLength then
+#   again
+#   :breakpoint loop-done
+#   return
+# 
+# : huffman-precompute-values
+#   0 1 0 0 128 0 1 0
+# 
