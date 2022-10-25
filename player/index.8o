@@ -115,7 +115,7 @@
   return
 
 : safe-storage
-  0 0 0 0 0
+  0 0 0 0 0 0
 : safe-storage2
   0 0 0 0
 

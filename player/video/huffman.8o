@@ -22,7 +22,7 @@
   loop
     # Free up a couple of registers
     i := safe-storage
-    save v2 - v6
+    save v2 - v7
     i := safe-storage2
     save vB - vE
 
@@ -108,7 +108,7 @@
 
     # Restore these registers so we can use and update the screen coordinates
     i := safe-storage
-    load v2 - v6
+    load v2 - v7
 
     # Point i to the correct byte, show it on screen
     i := long huffman-codebook
@@ -127,20 +127,20 @@
 
 # # Compute the first 100 entries in the Huffman codebook and save them to the
 # # memory below 0x200 🙈
-# 
+#
 # :alias pc-temp v0
 # :alias pc-bits v1
 # :alias pc-code-hi v2
 # :alias pc-code-lo v3
-# 
+#
 # :alias pc-addition-hi v4
 # :alias pc-addition-lo v5
-# 
+#
 # :alias pc-index v6
 # :alias pc-num v7
 # :alias pc-numToGo v8
 # :alias pc-bitsLength v9
-# 
+#
 # : huffman-precompute-table
 #   i := long huffman-codebook
 #   load pc-bitsLength - pc-bitsLength
@@ -182,13 +182,13 @@
 #     pc-addition-lo >>= pc-addition-lo
 #     pc-addition-hi >>= pc-addition-hi
 #     if vF != 0 then pc-addition-lo += 128
-# 
+#
 #     pc-bits += 1
 #     if pc-bits <= pc-bitsLength then
 #   again
 #   :breakpoint loop-done
 #   return
-# 
+#
 # : huffman-precompute-values
 #   0 1 0 0 128 0 1 0
-# 
+#
