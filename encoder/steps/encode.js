@@ -91,7 +91,7 @@ module.exports = function(movie, options) {
   function decode(method, data, headerSize, interlaced) {
     const dataLength = options.width * options.height / 8;
     switch(method) {
-      case 'interlacing':   return interlacing.decode(data, options.width, oddRow, display);
+      case 'interlacing':   return interlacing.decode(data, options.width, oddRow, new Array(dataLength).fill(0));
       case 'diff':          return data.map((byte, i) => byte ^ display[i]);
       case 'bbox':          return boundingBox.decode(new Array(dataLength).fill(0), data, options.width, interlaced);
       case 'RLE':           return split(data, headerSize, rle.decode);

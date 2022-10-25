@@ -32,13 +32,13 @@ const methods = [
   //         // ['diff', 'bbox', 'Huffman'],
   // ['diff', 'bbox', 'globalHuffman'],
 
-  // ['diff', 'interlacing', 'RLE'],
-  // ['interlacing', 'diff', 'bbox'],
-  //         // ['interlacing', 'diff', 'Huffman'],
-  // ['interlacing', 'diff', 'globalHuffman'],
-  // ['interlacing', 'diff', 'bbox', 'RLE'],
-  //         // ['interlacing', 'diff', 'bbox', 'Huffman'],
-  // ['interlacing', 'diff', 'bbox', 'globalHuffman'],
+  ['diff', 'interlacing', 'RLE'],
+  ['diff', 'interlacing', 'bbox'],
+  //         // ['diff', 'interlacing', 'Huffman'],
+  // ['diff', 'interlacing', 'globalHuffman'],
+  ['diff', 'interlacing', 'bbox', 'RLE'],
+  //         // ['diff', 'interlacing', 'bbox', 'Huffman'],
+  // ['diff', 'interlacing', 'bbox', 'globalHuffman'],
 ];
 
 // Load and diff all the images
