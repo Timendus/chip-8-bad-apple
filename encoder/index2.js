@@ -17,35 +17,29 @@ const MAX_SIZE = 59931;
 const movie = [];
 
 const methods = [
-  ['RLE'],
   ['bbox'],
-          // ['Huffman'],
-  ['globalHuffman'],
+  ['RLE'],
+  //         // ['Huffman'],
+  // ['globalHuffman'],
   ['bbox', 'RLE'],
-          // ['bbox', 'Huffman'],
-  ['bbox', 'globalHuffman'],
+  //         // ['bbox', 'Huffman'],
+  // ['bbox', 'globalHuffman'],
   ['diff', 'RLE'],
   ['diff', 'bbox'],
-          // ['diff', 'Huffman'],
-  ['diff', 'globalHuffman'],
+  //         // ['diff', 'Huffman'],
+  // ['diff', 'globalHuffman'],
   ['diff', 'bbox', 'RLE'],
-          // ['diff', 'bbox', 'Huffman'],
-  ['diff', 'bbox', 'globalHuffman'],
-  ['interlacing', 'RLE'],
-  ['interlacing', 'bbox'],
-          // ['interlacing', 'Huffman'],
-  ['interlacing', 'globalHuffman'],
-  ['interlacing', 'bbox', 'RLE'],
-          // ['interlacing', 'bbox', 'Huffman'],
-  ['interlacing', 'bbox', 'globalHuffman'],
-  ['interlacing', 'diff', 'RLE'],
-  ['interlacing', 'diff', 'bbox'],
-          // ['interlacing', 'diff', 'Huffman'],
-  ['interlacing', 'diff', 'globalHuffman'],
-  ['interlacing', 'diff', 'bbox', 'RLE'],
-          // ['interlacing', 'diff', 'bbox', 'Huffman'],
-  ['interlacing', 'diff', 'bbox', 'globalHuffman'],
-].reverse();
+  //         // ['diff', 'bbox', 'Huffman'],
+  // ['diff', 'bbox', 'globalHuffman'],
+
+  // ['diff', 'interlacing', 'RLE'],
+  // ['interlacing', 'diff', 'bbox'],
+  //         // ['interlacing', 'diff', 'Huffman'],
+  // ['interlacing', 'diff', 'globalHuffman'],
+  // ['interlacing', 'diff', 'bbox', 'RLE'],
+  //         // ['interlacing', 'diff', 'bbox', 'Huffman'],
+  // ['interlacing', 'diff', 'bbox', 'globalHuffman'],
+];
 
 // Load and diff all the images
 loadImages(movie, { start: 1, end: 6562 });

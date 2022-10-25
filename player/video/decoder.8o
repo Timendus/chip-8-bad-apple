@@ -3,6 +3,7 @@
 :alias startX v4
 :alias width v5
 :alias height v6
+:alias stride v7
 
 :const HORIZ_MARGIN 8
 :const OUTPUT_WIDTH 48
@@ -10,19 +11,42 @@
 :calc HORIZ_END { HORIZ_MARGIN + OUTPUT_WIDTH }
 
 # Decode the next frame, pointed to by i
-# v0 must hold the settings byte of this frame
+# Don't mess up vB - vE, make sure we update frame pointer
 : decode
+  # Load settings byte
+  load v0
+  #if SCHIP
+    vF := 1
+    i += vF
+  #end
+  v2 := 1           # Number of bytes consumed so far
+
+  # Is this a repeated frame?
+  v1 := 2
+  v1 &= v0
+  if v1 != 0 begin
+    load frames-per-image - frames-per-image
+    vF := 1
+    i += vF
+    v2 += 1         # Update number of bytes consumed so far
+  end
+
+  # Register number of bytes consumed so far
+  vF := v2
+  update-frame-pointer
+
+  # Is this a diff? Or do we need to clear the screen?
   v1 := 128
-  v1 &= v0          # Clear screen?
-  if v1 != 0 then clear
-  v1 := 32
-  v1 &= v0          # Bounding box enabled?
-  :next interlacing
-  v7 := 0
+  v1 &= v0
+  if v1 == 0 then clear
+
+  # Is the bounding box enabled?
+  v1 := 16
+  v1 &= v0
   if v1 == 0 begin
     # No bbox, so do the whole screen
     X := HORIZ_MARGIN
-    Y := v7
+    Y := 0
     startX := HORIZ_MARGIN
     width := HORIZ_END
     height := OUTPUT_HEIGHT
@@ -36,12 +60,10 @@
 
     Y := 31         # Take bottom 5 bits for minY and maxY
     Y &= v8
-    Y += v7
     height := 31
     height &= v9
     vF := 1
     height += vF    # maxY is *inclusive*
-    height += v7
     v1 := 0xE0      # Take the top three bits for minX and maxX
     v8 &= v1  v8 >>= v8  v8 >>= v8  # Shift down and convert from bytes to pixels
     v9 &= v1  v9 >>= v9  v9 >>= v9
@@ -53,26 +75,47 @@
     width += v9
     width += 8      # maxX is *inclusive*
   end
+
+  # Is this an interlaced frame?
+  v1 := 8
+  v1 &= v0
+  stride := 1
+  if v1 != 0 begin
+    stride := 2
+    # # Is this an odd frame?
+    v1 := 4
+    v1 &= v0
+    if v1 != 0 begin
+      Y += 1
+      height += 1
+    end
+  end
+
+  # Is this frame RLE compressed?
   v1 := 64
-  v1 &= v0          # RLE enabled?
+  v1 &= v0
   if v1 != 0 then jump rle-decode
-  # Else: Fall through to Huffman decode
 
-#include "huffman.8o"
+  # Is this frame Huffman compressed?
+  v1 := 32
+  v1 &= v0
+  if v1 != 0 then jump huffman-decode
 
-# # XOR the data at i directly to the screen
-# # Don't mess up vB - vE, make sure we update frame pointer
-# : plain-copy
-#   loop
-#     sprite X Y 1
-#     vF := 1
-#     i += vF
-#     vF := 1
-#     update-frame-pointer
-#     next-coordinate
-#     if Y != height then
-#   again
-#   return
+  # Else: Fall through to plain copy
+
+# XOR the data at i directly to the screen
+# Don't mess up vB - vE, make sure we update frame pointer
+: plain-copy
+  loop
+    sprite X Y 1
+    vF := 1
+    i += vF
+    vF := 1
+    update-frame-pointer
+    next-coordinate
+    if Y < height then
+  again
+  return
 
 # Do the RLE decoding
 # i points to the first run length
@@ -125,7 +168,7 @@
   X += 8
   if X != width then return
   X := startX
-  Y += 2
+  Y += stride
   return
 
 # # Do the sprite-based decoding
@@ -167,3 +210,5 @@
 #     if v4 != 0 then
 #   again
 #   return
+
+#include "huffman.8o"

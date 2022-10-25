@@ -79,29 +79,10 @@
     jump main-loop
   end
 
-  # Switch rows for interlacing effect
-  i := interlacing
-  load v0 - v0
-  vF := 1
-  v0 ^= vF
-  save v0
-
-  # Get pointer to current frame in i
-  get-frame-pointer
-
-  # Load image type and frames per image
-  load v0
-  #if SCHIP
-    vF := 1
-    i += vF
-  #end
-  frames-per-image := 31
-  frames-per-image &= v0  # number of frames to show this image for
-  vF := 1                 # number of bytes consumed so far
-  update-frame-pointer
-
   # Show the next frame on the screen
-  decode # takes i and v0 as input
+  frames-per-image := 0
+  get-frame-pointer
+  decode
 
   # Are we done..?
   :alias unpack-hi v2

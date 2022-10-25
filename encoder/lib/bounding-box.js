@@ -2,7 +2,7 @@ const { assert } = require('./helpers.js');
 
 // Get the bounding box of actual data for this image, horizontally aligned to 8
 // pixels
-function encode(image, width, boxImage) {
+function encode(image, width, interlaced, boxImage) {
   boxImage ||= image;
   assert(image.length == boxImage.length, `Expecting image to be the same size as boxImage`);
   const height = image.length / (width / 8);
@@ -28,6 +28,12 @@ function encode(image, width, boxImage) {
   }
 
   assert((maxX - minX + 1) * (maxY - minY + 1) == slice.length, `slice contains the right number of bytes`);
+
+  if ( interlaced ) {
+    minY *= 2;
+    maxY *= 2;
+  }
+
   assert((minX & 7) == minX, `minX can be encoded in 3 bits (got: ${minX})`);
   assert((maxX & 7) == maxX, `maxX can be encoded in 3 bits (got: ${maxX})`);
   assert((minY & 31) == minY, `minY can be encoded in 5 bits (got: ${minY})`);
@@ -36,13 +42,18 @@ function encode(image, width, boxImage) {
   return [(minX << 5) + minY, (maxX << 5) + maxY, ...slice];
 }
 
-function decode(background, data, width, xor = false) {
+function decode(background, data, width, interlaced, xor = false) {
   const height = background.length / (width / 8);
   const minX = data[0] >> 5;
   const maxX = data[1] >> 5;
-  const minY = (data[0] & 0x1F);
-  const maxY = (data[1] & 0x1F);
+  let minY = (data[0] & 0x1F);
+  let maxY = (data[1] & 0x1F);
   data = data.slice(2);
+
+  if ( interlaced ) {
+    minY /= 2;
+    maxY /= 2;
+  }
 
   assert((maxX - minX + 1) * (maxY - minY + 1) <= data.length, `Data contains enough bytes for the given range: ${JSON.stringify({ minX, maxX, minY, maxY, needed: (maxX - minX + 1) * (maxY - minY + 1), length: data.length, data })}`);
 

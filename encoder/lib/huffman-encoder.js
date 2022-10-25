@@ -3,28 +3,20 @@ const {assert, arrayDifference} = require('./helpers.js');
 
 let globalMappings, globalCodebook;
 
-function encodeWithCodebook(data, headerSize) {
-  const [header, body] = split(data, headerSize);
-  return [...header, ...huffman.encodeWithCodebook(body)];
+function encodeWithCodebook(data) {
+  return huffman.encodeWithCodebook(data);
 }
 
-function decodeWithCodebook(data, headerSize) {
-  const [header, body] = split(data, headerSize);
-  return [...header, ...huffman.decodeWithCodebook(body)];
+function decodeWithCodebook(data) {
+  return huffman.decodeWithCodebook(data);
 }
 
-function encodeGlobal(data, headerSize) {
-  const [header, body] = split(data, headerSize);
-  return [...header, ...huffman.encode(body, globalCodebook, globalMappings)];
+function encodeGlobal(data) {
+  return huffman.encode(data, globalCodebook, globalMappings);
 }
 
-function decodeGlobal(data, headerSize) {
-  const [header, body] = split(data, headerSize);
-  return [...header, ...huffman.decode(body, globalCodebook)];
-}
-
-function split(data, headerSize = 0) {
-  return [data.slice(0, headerSize), data.slice(headerSize)];
+function decodeGlobal(data) {
+  return huffman.decode(data, globalCodebook);
 }
 
 function encodedCodebook() {

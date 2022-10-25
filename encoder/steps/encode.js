@@ -44,18 +44,17 @@ module.exports = function(movie, options) {
 
     const encodings = {};
     for ( const chain of options.methods ) {
-      // Do we have to keep the first two bytes of data lossless when doing
-      // Huffman encoding?
-      const huffmanIndex = chain.indexOf('Huffman') != -1 ? chain.indexOf('Huffman') : chain.indexOf('globalHuffman');
-      const bboxIndex = chain.indexOf('bbox');
-      const saveBboxData = bboxIndex != -1 && huffmanIndex != -1 && bboxIndex < huffmanIndex;
+      // Do we have to keep the first two bytes of data untouched when doing
+      // Huffman/RLE encoding?
+      const headerSize = chain.includes('bbox') ? 2 : 0;
+      const interlaced = chain.includes('interlacing');
 
       let encoded = frame[options.input];
       for ( const method of chain )
-        encoded = encode(method, encoded, saveBboxData);
+        encoded = encode(method, encoded, headerSize, interlaced);
       let decoded = encoded;
       for ( const method of chain.map(v => v).reverse() )
-        decoded = decode(method, decoded, saveBboxData);
+        decoded = decode(method, decoded, headerSize, interlaced);
 
       // Limit to the max frame size
       decoded = decoded.slice(0, options.width * options.height / 8);
@@ -78,27 +77,31 @@ module.exports = function(movie, options) {
     oddRow ^= 1;
   }
 
-  function encode(method, data, saveBboxData) {
+  function encode(method, data, headerSize, interlaced) {
     switch(method) {
       case 'interlacing':   return interlacing.encode(data, options.width, oddRow);
       case 'diff':          return data.map((byte, i) => byte ^ display[i]);
-      case 'bbox':          return boundingBox.encode(data, options.width);
-      case 'RLE':           return rle.encode(data);
-      case 'Huffman':       return huffmanEncoder.encodeWithCodebook(data, saveBboxData ? 2 : 0);
-      case 'globalHuffman': return huffmanEncoder.encodeGlobal(data, saveBboxData ? 2 : 0);
+      case 'bbox':          return boundingBox.encode(data, options.width, interlaced);
+      case 'RLE':           return split(data, headerSize, rle.encode);
+      case 'Huffman':       return split(data, headerSize, huffmanEncoder.encodeWithCodebook);
+      case 'globalHuffman': return split(data, headerSize, huffmanEncoder.encodeGlobal);
     }
   }
 
-  function decode(method, data, saveBboxData) {
+  function decode(method, data, headerSize, interlaced) {
     const dataLength = options.width * options.height / 8;
     switch(method) {
       case 'interlacing':   return interlacing.decode(data, options.width, oddRow, display);
       case 'diff':          return data.map((byte, i) => byte ^ display[i]);
-      case 'bbox':          return boundingBox.decode(new Array(dataLength).fill(0), data, options.width);
-      case 'RLE':           return rle.decode(data);
-      case 'Huffman':       return huffmanEncoder.decodeWithCodebook(data, saveBboxData ? 2 : 0);
-      case 'globalHuffman': return huffmanEncoder.decodeGlobal(data, saveBboxData ? 2 : 0);
+      case 'bbox':          return boundingBox.decode(new Array(dataLength).fill(0), data, options.width, interlaced);
+      case 'RLE':           return split(data, headerSize, rle.decode);
+      case 'Huffman':       return split(data, headerSize, huffmanEncoder.decodeWithCodebook);
+      case 'globalHuffman': return split(data, headerSize, huffmanEncoder.decodeGlobal);
     }
+  }
+
+  function split(data, headerSize, func) {
+    return [...data.slice(0, headerSize), ...func(data.slice(headerSize))];
   }
 
   function selectSmallest(frame, encodings) {

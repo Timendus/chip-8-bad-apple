@@ -11,7 +11,7 @@ module.exports = function(movie, options) {
   const encodings = {
     'diff':          1 << 7,
     'RLE':           1 << 6,
-    'Huffman':       1 << 5,
+    // 'Huffman':       1 << 5,
     'globalHuffman': 1 << 5,
     'bbox':          1 << 4,
     'interlacing':   1 << 3
