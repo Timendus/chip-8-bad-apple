@@ -19,25 +19,20 @@ const movie = [];
 const methods = [
   ['bbox'],
   ['RLE'],
-  //         // ['Huffman'],
   ['globalHuffman'],
   ['bbox', 'RLE'],
-  //         // ['bbox', 'Huffman'],
   ['bbox', 'globalHuffman'],
+
   ['diff', 'RLE'],
   ['diff', 'bbox'],
-  //         // ['diff', 'Huffman'],
   ['diff', 'globalHuffman'],
   ['diff', 'bbox', 'RLE'],
-  //         // ['diff', 'bbox', 'Huffman'],
   ['diff', 'bbox', 'globalHuffman'],
 
   ['diff', 'interlacing', 'RLE'],
   ['diff', 'interlacing', 'bbox'],
-  //         // ['diff', 'interlacing', 'Huffman'],
   ['diff', 'interlacing', 'globalHuffman'],
   ['diff', 'interlacing', 'bbox', 'RLE'],
-  //         // ['diff', 'interlacing', 'bbox', 'Huffman'],
   ['diff', 'interlacing', 'bbox', 'globalHuffman'],
 ];
 
