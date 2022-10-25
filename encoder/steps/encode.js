@@ -1,7 +1,17 @@
-const bbox = require('../lib/bounding-box.js');
-const rle = require('../lib/rle.js');
-const huffman = require('../lib/huffman-encoder.js');
-const { render, assert, arrayDifference } = require('../lib/helpers.js');
+const {
+  boundingBox,
+  rle,
+  huffmanEncoder,
+  interlacing
+} = require('../lib');
+
+const {
+  render,
+  renderSideBySide,
+  assert,
+  assertAndWarn,
+  arrayDifference
+} = require('../lib/helpers.js');
 
 module.exports = function(movie, options) {
   // Set default options
@@ -10,53 +20,84 @@ module.exports = function(movie, options) {
     input: 'input',
     encoded: 'encoded',
     output: 'output',
+    repeatFrames: 'repeatFrames',
     width: 48,
     height: 32,
     render: false
   }, options);
 
   // Apply all chains of encoders (and decoders) to all frames, sequentially
+  let oddRow = 0;
+  let display = new Array(options.width * options.height / 8).fill(0);
   let previousFrame = false;
   for ( const frame of movie ) {
     if ( !frame[options.input] ) continue;
+    assert(frame[options.input].every(v => typeof v == 'number'), `Expecting the input image to hold only numeric values for frame ${frame.id}`);
+
+    // If there is no change, just show the previous frame longer
+    frame[options.repeatFrames] = 0;
+    if ( previousFrame && arrayDifference(display, frame[options.input]) == 0 ) {
+      previousFrame[options.repeatFrames]++;
+      frame.method = 'skip';
+      continue;
+    }
+
     const encodings = {};
     for ( const chain of options.methods ) {
+      // Do we have to keep the first two bytes of data lossless when doing
+      // Huffman encoding?
+      const huffmanIndex = chain.indexOf('Huffman') != -1 ? chain.indexOf('Huffman') : chain.indexOf('globalHuffman');
+      const bboxIndex = chain.indexOf('bbox');
+      const saveBboxData = bboxIndex != -1 && huffmanIndex != -1 && bboxIndex < huffmanIndex;
+
       let encoded = frame[options.input];
       for ( const method of chain )
-        encoded = encode(method, encoded, previousFrame);
+        encoded = encode(method, encoded, saveBboxData);
       let decoded = encoded;
       for ( const method of chain.map(v => v).reverse() )
-        decoded = decode(method, decoded, previousFrame);
+        decoded = decode(method, decoded, saveBboxData);
+
+      // Limit to the max frame size
+      decoded = decoded.slice(0, options.width * options.height / 8);
 
       const chainString = JSON.stringify(chain);
+      const pixelsDifference = arrayDifference(decoded, frame[options.input]);
+      const allowedDifference = findAllowedDifference(chain);
+      assert(decoded.every(v => typeof v == 'number' && v >= 0 && v <= 255), `${chainString}: Expecting the decoded image to hold only numeric values between 0 and 255 for frame ${frame.id} and chain ${chainString}: ${JSON.stringify(decoded)}`);
       assert(decoded.length == frame[options.input].length, `${chainString}: Output size (${decoded.length}) should equal input size (${frame[options.input].length} bytes) for frame ${frame.id}`);
-      assert(arrayDifference(decoded, frame[options.input]) == 0, `${chainString}: Decoded should match input for frame ${frame.id}.\n\nGot decoded ${JSON.stringify(decoded)}\n\nExpected input ${JSON.stringify(frame[options.input])}\n`);
+      assert(pixelsDifference <= allowedDifference, `${chainString}: Decoded should match input for frame ${frame.id}. Found ${pixelsDifference} pixels that don't match, where ${allowedDifference} pixels are allowed.\n\nGot decoded:\n${render(decoded, options.width)}\n${JSON.stringify(decoded)}\n\nExpected input:\n${render(frame[options.input], options.width)}\n${JSON.stringify(frame[options.input])}\n`);
+      // assertAndWarn(pixelsDifference == 0, `Warning: Difference of ${pixelsDifference} between input and decoded for frame ${frame.id}`);
       encodings[chainString] = { encoded, decoded };
       frame[chainString] = encoded;
     }
     selectSmallest(frame, encodings);
-    if ( options.render ) render(frame[options.output], options.width);
-    previousFrame = frame[options.input];
+    frame.oddRow = !!oddRow;
+    if ( options.render ) console.log(renderSideBySide(frame[options.input], frame[options.output], options.width));
+    display = frame[options.output];
+    previousFrame = frame;
+    oddRow ^= 1;
   }
 
-  function encode(method, data, previousFrame) {
+  function encode(method, data, saveBboxData) {
     switch(method) {
-      case 'diff':          return data.map((byte, i) => byte ^ (previousFrame[i] || 0));
-      case 'bbox':          return bbox.encode(data, options.width);
+      case 'interlacing':   return interlacing.encode(data, options.width, oddRow);
+      case 'diff':          return data.map((byte, i) => byte ^ display[i]);
+      case 'bbox':          return boundingBox.encode(data, options.width);
       case 'RLE':           return rle.encode(data);
-      case 'Huffman':       return huffman.encodeWithCodebook(data);
-      case 'globalHuffman': return huffman.encodeGlobal(data);
+      case 'Huffman':       return huffmanEncoder.encodeWithCodebook(data, saveBboxData ? 2 : 0);
+      case 'globalHuffman': return huffmanEncoder.encodeGlobal(data, saveBboxData ? 2 : 0);
     }
   }
 
-  function decode(method, data, previousFrame) {
+  function decode(method, data, saveBboxData) {
     const dataLength = options.width * options.height / 8;
     switch(method) {
-      case 'diff':          return data.map((byte, i) => byte ^ (previousFrame[i] || 0));
-      case 'bbox':          return bbox.decode(/*previousFrame || */new Array(dataLength), data, options.width);
+      case 'interlacing':   return interlacing.decode(data, options.width, oddRow, display);
+      case 'diff':          return data.map((byte, i) => byte ^ display[i]);
+      case 'bbox':          return boundingBox.decode(new Array(dataLength).fill(0), data, options.width);
       case 'RLE':           return rle.decode(data);
-      case 'Huffman':       return huffman.decodeWithCodebook(data, dataLength);
-      case 'globalHuffman': return huffman.decodeGlobal(data, dataLength);
+      case 'Huffman':       return huffmanEncoder.decodeWithCodebook(data, saveBboxData ? 2 : 0);
+      case 'globalHuffman': return huffmanEncoder.decodeGlobal(data, saveBboxData ? 2 : 0);
     }
   }
 
@@ -73,5 +114,17 @@ module.exports = function(movie, options) {
     frame[options.encoded] = encodings[chosenMethod].encoded;
     frame[options.output] = encodings[chosenMethod].decoded;
     frame.method = chosenMethod;
+  }
+
+  function findAllowedDifference(method) {
+    const lossyness = {
+      'interlacing':   options.width * options.height / 2,
+      'diff':          0,
+      'bbox':          0,
+      'RLE':           0,
+      'Huffman':       30,
+      'globalHuffman': 30
+    };
+    return Math.max(...method.map(v => lossyness[v]));
   }
 };

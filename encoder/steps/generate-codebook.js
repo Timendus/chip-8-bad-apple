@@ -9,6 +9,7 @@ module.exports = function(movie, options) {
     complete: true
   }, options);
 
-  const possibleValues = movie.map(frame => frame[options.input]).flat();
+  const possibleValues = movie.filter(frame => frame[options.input])
+                              .map(frame => frame[options.input]).flat();
   huffman.generateCodebook(possibleValues, options.maxBits, options.complete);
 };

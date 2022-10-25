@@ -3,6 +3,7 @@ module.exports = function(movie, options) {
   options = Object.assign({
     methods: ['input'],
     input: 'input',
+    encoded: 'encoded',
     additionalSize: 0,
     verbose: false
   }, options);
@@ -14,8 +15,8 @@ module.exports = function(movie, options) {
   options.methods.unshift('input');
   for ( const frame of movie ) {
     frame.inputSize = frame[options.input].length;
-    frame.encodedSize = frame[frame.method].length;
-    if ( frame[frame.method] ) {
+    frame.encodedSize = frame[options.encoded]?.length || 0;
+    if ( frame.method != 'skip' ) {
       chosenSize += frame.encodedSize;
       chosenPresent++;
     }
@@ -35,6 +36,7 @@ module.exports = function(movie, options) {
   // Calculate additional stats for each method
   const totalFrames = movie.length;
   for ( const method of Object.values(methods) ) {
+    if ( method.present == 0 ) method.present = movie.length;
     method.presentFraction = method.present / totalFrames;
     method.sizeFraction = method.size / methods[options.input].size / method.presentFraction;
     method.compressionRatio = `${Math.round((1 - method.sizeFraction) * 1000)/10}%`;
@@ -65,7 +67,7 @@ function printStats(methods) {
   for ( const method in methods ) {
     if ( methods[method].chosenPercentage ) {
       const chosenOutput = `Method chosen: ${methods[method].chosenPercentage.padStart(5, ' ')} (${methods[method].chosen})`;
-      console.log(`${method.padEnd(longestMethod, ' ')}  -  ${chosenOutput.padEnd(27, ' ')}  -  Compression ratio: ${methods[method].compressionRatio.padStart(5, ' ')}`);
+      console.log(`${method.padEnd(longestMethod, ' ')}  -  ${chosenOutput.padEnd(27, ' ')}  -  Compression ratio: ${methods[method].compressionRatio.padStart(5, ' ')}  -  Total size: ${methods[method].size.toString().padStart(6, ' ')} bytes`);
     } else {
       console.log(`${method.padEnd(longestMethod, ' ')}  -  Total size: ${methods[method].size.toString().padStart(8, ' ')} bytes   -  Compression ratio: ${methods[method].compressionRatio.padStart(5, ' ')}  (Old style: ${methods[method].oldStyleCompressionRatio})`);
     }
