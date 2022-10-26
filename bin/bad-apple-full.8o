@@ -100,7 +100,7 @@
 
 : main-loop
   # This loop syncs to 15FPS and does the high-frequency stuff
-  ticks := 4 # 4/60th = 1/15th of a second = 15 FPS
+    ticks := 4 # 4/60th = 1/15th of a second = 15 FPS
   loop
     loop
       # Handle key input
