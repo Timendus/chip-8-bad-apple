@@ -354,9 +354,9 @@ return
 :alias height v6
 :alias stride v7
 
-:const HORIZ_MARGIN 8
-:const OUTPUT_WIDTH 48
-:const OUTPUT_HEIGHT 32
+  :const HORIZ_MARGIN 8
+  :const OUTPUT_WIDTH 48
+  :const OUTPUT_HEIGHT 32
 :calc HORIZ_END { HORIZ_MARGIN + OUTPUT_WIDTH }
 
 # Decode the next frame, pointed to by i
@@ -746,6 +746,7 @@ return
 # : huffman-precompute-values
 #   0 1 0 0 128 0 1 0
 #
+
 
 
 : smpData  # SAMPLE BUFFER DATA  [ 128 bytes ]
