@@ -2,7 +2,8 @@ const {
   boundingBox,
   rle,
   huffmanEncoder,
-  interlacing
+  interlacing,
+  singleBytes
 } = require('../lib');
 
 const {
@@ -93,6 +94,7 @@ module.exports = function(movie, options) {
       case 'RLE':           return split(data, headerSize, rle.encode);
       case 'Huffman':       return split(data, headerSize, huffmanEncoder.encodeWithCodebook);
       case 'globalHuffman': return split(data, headerSize, huffmanEncoder.encodeGlobal);
+      case 'singleBytes':   return split(data, headerSize, data => singleBytes.encode(data, options.width));
     }
   }
 
@@ -105,6 +107,7 @@ module.exports = function(movie, options) {
       case 'RLE':           return split(data, headerSize, rle.decode);
       case 'Huffman':       return split(data, headerSize, huffmanEncoder.decodeWithCodebook);
       case 'globalHuffman': return split(data, headerSize, huffmanEncoder.decodeGlobal);
+      case 'singleBytes':   return split(data, headerSize, data => singleBytes.decode(data, options.width, new Array(dataLength).fill(0)));
     }
   }
 
@@ -134,7 +137,8 @@ module.exports = function(movie, options) {
       'bbox':          0,
       'RLE':           0,
       'Huffman':       30,
-      'globalHuffman': 30
+      'globalHuffman': 30,
+      'singleBytes':   0,
     };
     return Math.max(...method.map(v => lossyness[v]));
   }

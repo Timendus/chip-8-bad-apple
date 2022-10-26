@@ -97,6 +97,13 @@
     end
   end
 
+#if SINGLEBYTE
+  # Is this frame singleByte compressed?
+  v1 := 96
+  v1 &= v0
+  if v1 == 96 then jump singleByte-decode
+#end
+
   # Is this frame RLE compressed?
   v1 := 64
   v1 &= v0
@@ -169,6 +176,39 @@
     if Y < height then
   again
   return
+
+#if SINGLEBYTE
+: singleByte-decode
+  load v1 - v1
+  vF := 1
+  i += vF
+  vF := 1
+  update-frame-pointer
+  loop
+    while v1 != 0
+    v1 -= 1
+    load v0
+    #if SCHIP
+      vF := 1
+      i += vF
+    #end
+    v8 := 31         # Take bottom 5 bits for Y
+    v8 &= v0
+    if stride == 2 then v8 <<= v8  # Interlacing
+    v8 += Y
+    X := 0xE0       # Take the top three bits for X
+    X &= v0
+    X >>= X         # Shift down and convert from bytes to pixels
+    X >>= X
+    X += HORIZ_MARGIN
+    sprite X v8 1
+    vF := 2
+    update-frame-pointer
+    vF := 1
+    i += vF
+  again
+  return
+#end
 
 : next-coordinate
   X += 8

@@ -14,7 +14,8 @@ module.exports = function(movie, options) {
     // 'Huffman':       1 << 5,
     'globalHuffman': 1 << 5,
     'bbox':          1 << 4,
-    'interlacing':   1 << 3
+    'interlacing':   1 << 3,
+    'singleBytes':   (1 << 5) + (1 << 6),
   };
 
   // Give each frame a one or two byte header with the right settings
