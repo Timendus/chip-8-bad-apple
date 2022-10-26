@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const huffman = require('./huffman.js');
+const huffman = require('./lib/huffman.js');
 
 test([1,2,2,3], 'four values');
 
