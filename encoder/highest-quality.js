@@ -24,7 +24,7 @@ const methods = [
 ];
 
 // Load and diff all the images
-loadImages(movie, { start: 1, end: 100, step: 1, path: "frames/hires/bad_apple_{id}.png" });
+loadImages(movie, { start: 1, end: 6562, step: 1, path: "frames/hires/bad_apple_{id}.png" });
 diff(movie, {input: 'input', diffWith: 'input', encoded: 'diff'});
 generateCodebook(movie, { input: 'diff', maxBits: 16 });
 const codebook = huffmanEncoder.encodedCodebook();
