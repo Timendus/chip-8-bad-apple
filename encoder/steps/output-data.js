@@ -3,8 +3,8 @@ const fs = require('fs');
 module.exports = function(movie, options) {
   // Set default options
   options = Object.assign({
-    framesPath: "player/video/frames.8o",
-    codebookPath: "player/video/codebook.8o",
+    framesPath: "player/video/lores/frames.8o",
+    codebookPath: "player/video/lores/codebook.8o",
     codebook: false,
     encoded: 'encoded'
   }, options);

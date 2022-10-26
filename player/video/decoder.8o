@@ -5,9 +5,15 @@
 :alias height v6
 :alias stride v7
 
-:const HORIZ_MARGIN 8
-:const OUTPUT_WIDTH 48
-:const OUTPUT_HEIGHT 32
+#if HIRES
+  :const HORIZ_MARGIN 16
+  :const OUTPUT_WIDTH 96
+  :const OUTPUT_HEIGHT 64
+#else
+  :const HORIZ_MARGIN 8
+  :const OUTPUT_WIDTH 48
+  :const OUTPUT_HEIGHT 32
+#end
 :calc HORIZ_END { HORIZ_MARGIN + OUTPUT_WIDTH }
 
 # Decode the next frame, pointed to by i

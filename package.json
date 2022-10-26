@@ -1,13 +1,14 @@
 {
   "name": "bad-apple",
   "scripts": {
-    "scale": "magick mogrify -path ./frames/scaled/ -resize 48x32^ -gravity center -extent 48x32 -threshold 50% -quality 100 ./frames/original/*.png",
-    "encode": "./encoder/index.js",
-    "encode2": "./encoder/index2.js",
-    "build": "octopus player/index.8o bin/bad-apple.8o && cat bin/bad-apple.8o | pbcopy",
-    "build-all": "npm run build && npm run build-binary && npm run build-html",
-    "build-binary": "npm run build && octo bin/bad-apple.8o bin/bad-apple.ch8",
-    "build-html": "mkdir -p dist && npm run build && octo --options octo-config.json bin/bad-apple.8o dist/index.html"
+    "scale-lores": "magick mogrify -path ./frames/lores/ -resize 48x32^ -gravity center -extent 48x32 -threshold 50% -quality 100 ./frames/original/*.png",
+    "scale-hires": "magick mogrify -path ./frames/hires/ -resize 96x64^ -gravity center -extent 96x64 -monochrome -quality 100 ./frames/original/*.png",
+    "encode-lores": "./encoder/smallest-size.js",
+    "encode-hires": "./encoder/highest-quality.js",
+    "build": "octopus player/index.8o bin/bad-apple-high-quality.8o HIRES && octopus player/index.8o bin/bad-apple-full.8o LORES && cat bin/bad-apple-full.8o | pbcopy",
+    "build-all": "npm run build && npm run build-binaries && npm run build-html",
+    "build-binaries": "npm run build && octo bin/bad-apple-full.8o bin/bad-apple-full.ch8 && octo bin/bad-apple-high-quality.8o bin/bad-apple-high-quality.ch8",
+    "build-html": "mkdir -p dist && npm run build && octo --options octo-config-lores.json bin/bad-apple-full.8o dist/full.html && octo --options octo-config-hires.json bin/bad-apple-high-quality.8o dist/high-quality.html"
   },
   "dependencies": {
     "chipcode": "../../chipcode",

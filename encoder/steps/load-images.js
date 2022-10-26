@@ -4,7 +4,7 @@ const PNG = require('pngjs').PNG;
 module.exports = function(movie, options) {
   // Set default options
   options = Object.assign({
-    path: "frames/scaled/bad_apple_{id}.png",
+    path: "frames/lores/bad_apple_{id}.png",
     id: i => i < 1000 ? String(i).padStart(3, '0') : i,
     start: 1,
     end: 6562,

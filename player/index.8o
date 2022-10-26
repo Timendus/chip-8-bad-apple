@@ -16,6 +16,9 @@
 :const STEPPING 2
 
 : main
+  #if HIRES
+    hires
+  #end
   clear
   loadSong 0 70 # or 65?
   :alias unpack-hi current-frame-hi
@@ -27,7 +30,11 @@
 
 : main-loop
   # This loop syncs to 15FPS and does the high-frequency stuff
-  ticks := 4 # 4/60th = 1/15th of a second = 15 FPS
+  #if HIRES
+    ticks := 2 # 2/60th = 1/30th of a second = 30 FPS
+  #else
+    ticks := 4 # 4/60th = 1/15th of a second = 15 FPS
+  #end
   loop
     loop
       # Handle key input
@@ -123,7 +130,13 @@
 #include "music/song.8o"
 
 #include "video/decoder.8o"
-#include "video/codebook.8o"
-#include "video/frames.8o"
+
+#if HIRES
+  #include "video/hires/codebook.8o"
+  #include "video/hires/frames.8o"
+#else
+  #include "video/lores/codebook.8o"
+  #include "video/lores/frames.8o"
+#end
 #data
 : the-end  # So we know when we're out of frames
