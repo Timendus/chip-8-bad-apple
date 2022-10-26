@@ -19,8 +19,10 @@ const movie = [];
 const methods = [
   ['RLE'],
   ['globalHuffman'],
+  // ['singleBytes'],       // Need to store coordinates in more bits
   ['diff', 'RLE'],
   ['diff', 'globalHuffman'],
+  // ['diff', 'singleBytes'],
 ];
 
 // Load and diff all the images

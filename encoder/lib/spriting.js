@@ -1,3 +1,6 @@
+// All of the logic for the spriting encoder, which is no longer in use because
+// I didn't like the image quality it produced
+
 function assert(condition, message) {
   if (!condition) throw `Assertion failed: ${message}`;
 }
