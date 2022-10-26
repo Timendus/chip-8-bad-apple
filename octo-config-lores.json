@@ -15,7 +15,7 @@
 	"vBlankQuirks": false,
 	"screenRotation": 0,
 	"maxSize": 65024,
-	"touchInputMode": "none",
+	"touchInputMode": "swipe",
 	"fontStyle": "octo",
 	"displayScale": "6"
 }

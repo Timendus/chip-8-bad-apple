@@ -23,8 +23,13 @@
   loadSong 0 70 # or 65?
   :alias unpack-hi current-frame-hi
   :alias unpack-lo current-frame-lo
-  :unpack long bad_apple_001
-  playing := PLAYING
+  #if HIRES
+    :unpack long bad_apple_001
+    playing := PLAYING
+  #else
+    :unpack long bad_apple_000
+    playing := STEPPING
+  #end
   frames-per-image := 0
   delay := frames-per-image # Reset timing
 

@@ -52,6 +52,10 @@ module.exports = function(movie, options) {
       const headerSize = chain.includes('bbox') ? 2 : 0;
       const interlaced = chain.includes('interlacing');
 
+      // Skip interlaced chains for the first frame, otherwise the message gets
+      // garbled and unreadable
+      if ( frame.id == '000' && interlaced ) continue;
+
       let encoded = frame[options.input];
       for ( const method of chain )
         encoded = encode(method, encoded, headerSize, interlaced);

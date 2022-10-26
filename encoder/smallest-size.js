@@ -37,7 +37,7 @@ const methods = [
 ];
 
 // Load and diff all the images
-loadImages(movie, { start: 1, end: 6562 });
+loadImages(movie, { start: 0, end: 6562 });
 diff(movie, {input: 'input', diffWith: 'input', encoded: 'diff'});
 generateCodebook(movie, { input: 'diff', maxBits: 16 });
 const codebook = huffmanEncoder.encodedCodebook();
