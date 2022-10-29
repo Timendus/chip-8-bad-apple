@@ -1,10 +1,61 @@
-# Bad Apple on XO-CHIP
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/T6T0DOOWP)
 
-This is an attempt to bring the well known [Bad
-Apple!!](https://en.wikipedia.org/wiki/Bad_Apple!!) music video to XO-CHIP,
-music and all.
+# Bad Apple!! in XO-CHIP
 
-## Development log
+This is an attempt to bring the well known [Bad Apple!! music
+video](https://en.wikipedia.org/wiki/Bad_Apple!!) to XO-CHIP in its entirety,
+music and all. It's a collaboration between
+[Kouzeru](https://github.com/Kouzeru) and myself for [Octojam
+9](https://itch.io/jam/octojam-9/entries).
+
+ * [The entry on Itch.io](https://timendus.itch.io/bad-apple)
+ * [Download binaries](https://github.com/Timendus/chip-8-bad-apple/tree/main/bin)
+ * Run the program in your browser:
+   * [Full version](https://timendus.github.io/bad-apple/full.html)
+     (Low resolution, low quality, but the whole thing)
+   * [High quality version](https://timendus.github.io/bad-apple/high-quality.html)
+     (High resolution, high quality, but only a tiny part of it)
+
+## The concept
+
+In recent years the Bad Apple music video has been ported to many retro systems,
+becoming one of those Internet phenomena of which you stop asking "can it play
+Bad Apple?" and start asking "when will it play Bad Apple?".
+
+For this year's Octojam I set out to make that happen for XO-CHIP, and I asked
+Kouzeru to support this project by writing a 1-bit arrangement of the Bad Apple
+music for his XO-Tracker, which he did in a stellar way!
+
+But how much can you really fit in XO-CHIP's ~64k of memory? When I'm
+hand-writing code it seems like I never come near the limit. Would it be enough
+space to store an entire music video?
+
+So this project quickly devolved into the question "can it play **ALL** of Bad
+Apple?" and me learning about image and video compression and trying different
+techniques to try to achieve an impossible compression ratio while still being
+able to decode that mess using CHIP-8 instructions.
+
+Again, many thanks to Kouzeru for making this project possible!
+
+## See also
+
+If you like this, you may also enjoy my other CHIP-8 projects:
+
+  * [3D Viper Maze](https://github.com/Timendus/3d-viper-maze) (XO-CHIP, Octojam
+    7) and [3D VIP'r Maze](https://github.com/Timendus/3d-vipr-maze) (original
+    CHIP-8)
+  * [Alien Inv8sion](https://github.com/Timendus/alien-inv8sion) (XO-CHIP with
+    "secret 16-colour mode", Octojam 8)
+
+If you are a CHIP-8 emulator / interpreter developer, you may be interested in
+these projects:
+
+  * [CHIP-8 test suite](https://github.com/Timendus/chip8-test-suite) -
+    A test suite to find all kinds of issues in your interpreter
+  * [CHIP-8 Binary Format](https://github.com/Timendus/chip8-binary-format) -
+    An effort to standardise on a file format for CHIP-8 and friends
+
+## Development notes
 
 ### Video on CHIP-8?
 
@@ -18,20 +69,32 @@ back-of-the-napkin calculation did not make me happy:
 
 #### Calculating the odds
 
-An uncompressed image of 64 x 32 pixels (in "lores" mode) is 256 bytes. The
-entire Bad Apple video consists of 6562 frames at 30FPS. 6562 x 256 = 1679872
-bytes, or one megabyte of data. That's 26 times the memory we have available.
+An uncompressed image of 48 x 32 pixels (semi-4:3 aspect ratio in `lores` mode)
+is 192 bytes. The entire Bad Apple video consists of 6562 frames at 30 FPS. 6562
+x 192 = 1259904 bytes, or 1.2 megabyte of data. That's 19 times the memory we
+have available.
 
-Calculating from the other end: The whole video is 3 minutes and 39 seconds.
-That's a little under 300 bytes per second. Not per frame, per second!
+I made the same calculation for 15 FPS and for `hires` video:
 
-This means that to achieve 1 bit "lores" video at 30FPS we need a compression
-ratio of 97%. I couldn't pull off more than around 25% image compression last
+![Graph of available space versus required space](./pictures/graph1.png)
+
+Calculating from the other end, how many seconds of the video can we actually
+store without any compression?
+
+![Graph of number of seconds in the video versus how many we can sture](./pictures/graph2.png)
+
+So what do we have to aim for with our compression for this to work? The whole
+video is 3 minutes and 39 seconds so we have to shoot for a little under 300
+bytes per second. Not per frame, per second! To achieve `lores` video at 30 FPS
+we need a compression ratio of almost 95%. For 15 FPS `lores` we need "only"
+90%.
+
+I couldn't pull off more than around 25% image compression last
 year for [3D VIP'r Maze](https://github.com/Timendus/3d-vipr-maze)...
 
 And keep in mind that we also need some storage left for program code and music.
-So that's going to be an insanely tight squeeze. This project is probably doomed
-from the start 😄
+So this was going to be an insanely tight squeeze. This project was pretty much
+doomed from the start 😄
 
 #### The sound part
 
@@ -46,24 +109,21 @@ could pull off something cool here.
 
 ### Looking at the bright side
 
-There are a couple of reasons why this may be doable, even though my
-calculations say otherwise.
+It's not all doom and gloom. There are a couple of important reasons why this
+project may be doable, even though my calculations say otherwise:
 
-1. We don't need 30 FPS to give the impression of fluid motion; 10 or 15 FPS
-   could be fine, or maybe a variable number of frames per second may be more
-   appropriate;
-2. Our compression doesn't need to be lossless, we can have a few messed up
+1. Some frames are the same as the previous one. In that case we really don't
+   need 15 or 30 FPS to give the impression of fluid motion: a variable number
+   of frames per second may be more appropriate;
+2. Some frames are _almost_ the same as the previous one. In those cases it's
+   much "cheaper" to store the changes relative to the last frame;
+3. Our compression doesn't have to be lossless, we can have a few messed up
    pixels in some frames;
-3. The Bad Apple video is special in the sense that it has large swaths of the
-   same colour for much of the time.
+4. The Bad Apple video is special in the sense that it has large swaths of the
+   same colour for much of the time. So this data should lend itself much better
+   to my run length encoding scheme than the 3D VIP's Maze images.
 
-Because of the black-and-white and animated nature of the video, not the whole
-screen changes every frame and much of the frame is a single colour. So this
-data should lend itself much better to my run length encoding scheme than the
-3D VIP's Maze images. Also, because each frame is shown for only a very short
-amount of time, we could maybe implement a very simple lossy video codec.
-
-So let's start by run length encoding each frame and see where we're at.
+So let's start by just run length encoding each frame and see where we're at.
 
 ### So many pictures
 
@@ -78,32 +138,31 @@ The result looked like this:
 
 ![The first third of Bad Apple, without sound, running on XO-CHIP](./pictures/first-result.gif)
 
-I quickly figured out that most frames compressed even better if I didn't store
-the original frame, but rather the changes from the current frame to the
-previous frame. By using XOR to find the changes, we can make use of one of the
-strengths of CHIP-8: the only difference in the decoder between rendering a full
-new frame and rendering the changes relative to the previous frame is wether the
-decoder clears the screen before drawing.
+As pointed out above, most frames compressed better if I didn't store the
+original frame, but rather the changes from the current frame to the previous
+frame. By using XOR to find the changes, we can make use of one of the strengths
+of CHIP-8: the only difference in the decoder between rendering a full new frame
+and rendering the changes relative to the previous frame is wether the decoder
+clears the screen before drawing.
 
 To make sure that we always use the smallest version of the frame, the encoder
 checks the lengths of the original (uncompressed) bitmap, the run length encoded
 version of the original and the run length encoded version of the diff, and
 outputs the smallest of the three.
 
-Using diffs, plus the unique nature of the video, as pointed out above, made
-this data compress much better than the 3D VIP'r Maze image data. The first part
-of the video easily compressed to an over 50% compression rate. Or in other
-words: it made the video less than half as small.
+As expected, using diffs combined with the unique nature of the video made this
+data compress much better than the 3D VIP'r Maze image data. The first part of
+the video easily compressed to an over 50% compression rate. Or in other words:
+it made the video less than half as small.
 
 But still, at this stage I could only store the video up to frame 1800 of the
-6562 total, while leaving us some space for the music. And that at a lower frame
+6562 total, while leaving us some space for the music. And that at the low frame
 rate of 15 frames per second (I thought, but it's even worse, see below 😉).
 
 Now there were roughly three directions we could take this in:
 1. Reduce the frame rate even more; or
 2. Reduce the image size a lot more; or
-3. Start looking into better ways to compress the video, specifically lossy
-   video codecs.
+3. Start looking into better ways to compress the video!
 
 Obviously there is only one correct answer 😄
 
@@ -121,8 +180,8 @@ video frames, instead of doing that in my encoder script. This way we have more
 fine-grained control over the type of scaling that is done and we can just read
 in the smaller images pixel-by-pixel, which is much faster. I decided to go with
 48x32 pixels, as that is relatively close to a 4:3 ratio, a multiple of eight
-and can be centered on the screen. To keep the aspect ratio correct, I cropped
-two pixels off the top and bottom of the image.
+and can be centered on the screen. To really keep the aspect ratio correct, I
+cropped two pixels off the top and bottom of the image.
 
 An added benefit of losing 16 horizontal pixels is that we're also storing less
 data than before. So now we can cram images up to frame 2200 in roughly the same
@@ -139,9 +198,7 @@ It's not as big of a deal as it may seem though, since a higher FPS rate
 actually compresses better. Because the difference between successive images is
 actually smaller. You'd expect that we could only fit the video in until frame
 1100 at the correct 15FPS now (since that's half of 2200), but I was getting
-somewhere close to 1500. This made me curious to see if the same holds for
-larger frames with more pixels (`hires`, anyone?!). Still, this was an
-unfortunate step back.
+somewhere close to 1500. Still, this was an unfortunate step back.
 
 Other than that, the actual bug turned out to just be an issue with the original
 frame images that I was using. Somehow a duplicate of frame 88 ended up in the
@@ -275,9 +332,8 @@ now I'm keeping this in!
 
 I determined that we don't want loss in the temporal domain, and I thought that
 I couldn't push the lossless compression much further without getting
-ridiculous, so there's only one direction left to go. The next step to take is
-to sacrifice some quality in the spacial domain, in the form of a lossy video
-codec.
+ridiculous, so it was now time to sacrifice some quality in the spacial domain,
+in the form of a lossy video codec.
 
 The idea I had was simple enough on the CHIP-8 side: for each frame, we have a
 list of sprites to draw. Each entry in the list consists of X and Y coordinates
@@ -285,7 +341,7 @@ and the index of the sprite to draw in some shared dictionary of sprites. So in
 our decoder, we just do something like:
 
 ```octo
-  # i points to some encoded sprite in the list
+  # i points to an entry in the list
   load v2
   i := dictionary
   i += v2  i += v2  i += v2  i += v2  # Add 8 * v2 to i to get pointer to sprite
@@ -319,7 +375,7 @@ because I would have had to use more bits for my sprite indices, and also store
 more sprites, the compression would have been much worse. In the video above I
 have limited the encoder to do no more than two sprited frames in a row, but
 still the effect is way too messy. The compression was pretty nice though: this
-version has a compression of 79.6%!
+version has a compression rate of 79.6%!
 
 Missing a couple of pixels here and there is fine, but missing whole bands and
 blobs of pixels quickly makes the image unrecognizable when you have so few
@@ -339,9 +395,96 @@ that's very acceptable given how amazing the song sounds!
 
 ### Huffman trees
 
-So having tried all of my three big ideas, I'm basically back to square one. But
-armed with more knowledge, and a better understanding of what I'm looking for
-now:
+So having tried all of my three big ideas, I was basically back to square one.
+But armed with more knowledge, and a better understanding of what I was looking
+for now:
 
   * Lossy is fine for a couple of pixels in some frames, but no more
-  * We need to squeeze more pixels into fewer bits
+  * We needed to squeeze more pixels into fewer bits
+
+So I sat myself down behind my laptop, read up on Huffman compression
+(specifically [canonical Huffman
+codes](https://en.wikipedia.org/wiki/Canonical_Huffman_code)) and spent a couple
+of days understanding and writing Huffman compression and decompression
+routines.
+
+Huffman compression is really quite amazing. It works a bit like Morse code
+does: characters that are used more frequently are encoded using fewer dots and
+dashes, so a minimal number of dots and dashes are required to send a message.
+Or in our case: bytes that occur in the data more frequently get encoded in
+fewer bits.
+
+To keep the decompression routine in CHIP-8 a little more manageable, I limited
+the maximum number of bits to 16. So a single byte can now be represented by
+anything between one and 16 bits. If we then choose our representations wisely,
+the size of the whole data gets smaller.
+
+After a couple of days of messing around with this, I was happy to see this
+stuttery video:
+
+![First video with working Huffman decompression](./pictures/huffman.gif)
+
+Because decoding Huffman encoded data is a per-bit operation, and we need to
+look up the correct value belonging to the binary representation, it is not the
+fastest. After doing a little optimization and cranking up the "cycles per
+frame" a bit more, it was pretty fluid again.
+
+And the compression was almost as good as the "spriting" method, at a 79.4%
+compression rate!
+
+Because I had limited the maximum size per byte to 16 bits, there were some
+bytes that could not be represented. But the great thing about the way Huffman
+compression works is that those were automatically the bytes that occur in the
+data the least. I used my "find the closest match" logic from the "spriting"
+method to make sure those bytes would be encoded in a way that was very close to
+the original. If you look closely at the animation above you can see some weird
+sticky pixels here and there. I made sure that the encoder would find the diff
+between the desired output of the current frame and the actual output of the
+previous frame, so those tiny errors would be cleaned up in the next frame. This
+last fix slightly reduced the effectiveness to 78.5%.
+
+So even though Huffman encoding is usually considered lossless, this made it a
+tiny bit lossy, but in a way that you hardly notice, which is awesome. This also
+gives us some wiggle room in the future, by tweaking the max number of bits the
+algorithm may use between 12 and 16, we can "tweak" the quality of the video to
+make it fit the available memory perfectly. This can make a difference of about
+1000 to 2000 bytes, and look anywhere from good to kinda reasonable.
+
+### Interlacing
+
+In the introduction I wrote that for `lores` video at 15 FPS we would need a
+compression ratio of 90% to make it fit in memory. Now that we also have some
+code, the Bad Apple song and the Huffman decoder, we have only slightly less
+than 60.000 bytes left for the video frames. A quick calculation tells us that
+we now really need a 90.5% compression ratio. And I had only arrived at 78.5%
+(and was already pretty happy with that, to be honest!).
+
+Getting from 78.5% to 90.5% sounds like I was pretty close, but it meant that I
+still had more than twice as much data as I could fit, and I still had a long
+way to go. Which required something more drastic.
+
+So I explored the idea of interlacing the video. Interlacing is a very old
+technique from the world of television. They used to alternate between sending
+all the even and all the odd lines of the frame, so that they only needed half
+the bandwidth. The delay in the phosphor of CRT monitors would then "blend" the
+even and odd lines together so the effect was hardly visible, and a higher
+perceived framerate was achieved.
+
+I implemented interlacing in my encoder and decoder, and this is the first kinda
+crappy version of that:
+
+![First video with semi-working interlacing](./pictures/interlacing.gif)
+
+I don't really like the visual effect, but I did like the reduction in data that
+it gave me. And I couldn't really be very picky at this point.
+
+As I explained before, having a lower framerate does not halve the required data
+because the difference between frames is bigger. So adding interlacing to my
+code reduced the efficiency of the compression down to 71.2%. But because we
+only need to store half as much data, we're effectively at a 85.6% compression
+ratio. That's a pretty big net improvement.
+
+Another benefit when combined with my slow Huffman decompression routine is that
+we only have to decompress half as much data per frame, doubling the speed of
+decompression.
+
