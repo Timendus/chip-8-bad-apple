@@ -148,7 +148,9 @@ clears the screen before drawing.
 To make sure that we always use the smallest version of the frame, the encoder
 checks the lengths of the original (uncompressed) bitmap, the run length encoded
 version of the original and the run length encoded version of the diff, and
-outputs the smallest of the three.
+outputs the smallest of the three. I used kept using this concept, of having
+different algorithms "compete" with each other and selecting the winner for each
+frame, during the entire development process.
 
 As expected, using diffs combined with the unique nature of the video made this
 data compress much better than the 3D VIP'r Maze image data. The first part of
@@ -475,16 +477,66 @@ crappy version of that:
 
 ![First video with semi-working interlacing](./pictures/interlacing.gif)
 
-I don't really like the visual effect, but I did like the reduction in data that
-it gave me. And I couldn't really be very picky at this point.
+I didn't really like the visual effect, but I did like the reduction in data that
+it gave me. And I couldn't really be very picky at this point. So I just
+comforted myself with the thought that XO-CHIP tries to be "historically
+plausible", and as such I can't imagine anyone running XO-CHIP on anything other
+than a CRT monitor 😄
 
-As I explained before, having a lower framerate does not halve the required data
-because the difference between frames is bigger. So adding interlacing to my
-code reduced the efficiency of the compression down to 71.2%. But because we
-only need to store half as much data, we're effectively at a 85.6% compression
-ratio. That's a pretty big net improvement.
+As I explained before, having a framerate that's twice as slow does not halve
+the compressed data because the difference between frames is bigger. The same
+goes for interlaced rows. So adding interlacing to my code reduced the objective
+efficiency of the compression to 71.2%. But because we only need to store half
+as much data, we're effectively at a 85.6% compression ratio. That's a pretty
+big net improvement.
 
 Another benefit when combined with my slow Huffman decompression routine is that
 we only have to decompress half as much data per frame, doubling the speed of
 decompression.
 
+### Refactoring the encoder
+
+I had a couple of additional ideas to explore, but adding in the interlacing
+really showed the limits of my current encoding script. To encode the frames in
+a format that Octo understands I just used a simple Nodejs script, that was
+getting more and more messy. So I decided that it needed a redo.
+
+The new encoder took quite a bit of time to write. But in the end it allowed me
+to play with ideas more easily. For example, I was able to quickly build a
+version of the video in `hires` at 30 frames per second, without interlacing and
+super limited artefacts, just to see how much of the video Huffman and
+run-length encoding could squeeze in 64K:
+
+![The Bad Apple video in `hires`, at 30 FPS and in high quality](./pictures/high-quality.gif)
+
+The answer is: just 16 seconds 🙈
+
+But as seen in the graph above, without compression we would expect this to be
+2.8 seconds. So although 16 seconds is still kinda sad, it's almost 6 times
+better. And that is even without the bounding box trick (because its encoding
+isn't compatible with `hires` and I didn't feel like changing it).
+
+### Single bytes
+
+With the new encoder up and running I tried what would happen if instead of
+storing frames as a continuous stream of data (even though we know that much of
+it is "empty" when operating on the diff between successive frames), I would
+instead store it as mutations of individual bytes.
+
+I encoded each byte that needed to change in two bytes: one for the coordinate
+of the mutation (again, three most significant bits for X, least significant
+five bits for Y) and another one for the value.
+
+The result wasn't bad actually, but the Huffman encoding was equally good, so
+this new method was only chosen for less than 3% of the frames. So in the grand
+scheme of things this didn't improve much.
+
+Talking about comparing different methods, here's a nice graph:
+
+![Comparison of different compression methods](./pictures/compression-methods.png)
+
+As you can see, Huffman is kicking "single byte"'s ass. The comparison is not
+100% fair though, because when we use Huffman we also need to store a
+"translation table" for all the values. This additional data, which is a couple
+hundred bytes, is not taken into account for this graph because it is shared
+between all chains that include Huffman.
