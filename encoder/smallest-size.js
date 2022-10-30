@@ -34,12 +34,24 @@ const methods = [
   ['diff', 'interlacing', 'globalHuffman'],
   ['diff', 'interlacing', 'bbox', 'RLE'],
   ['diff', 'interlacing', 'bbox', 'globalHuffman'],
+
+  ['diff', 'reduce-diff', 'RLE'],
+  ['diff', 'reduce-diff', 'bbox'],
+  ['diff', 'reduce-diff', 'globalHuffman'],
+  ['diff', 'reduce-diff', 'bbox', 'RLE'],
+  ['diff', 'reduce-diff', 'bbox', 'globalHuffman'],
+
+  ['diff', 'interlacing', 'reduce-diff', 'RLE'],
+  ['diff', 'interlacing', 'reduce-diff', 'bbox'],
+  ['diff', 'interlacing', 'reduce-diff', 'globalHuffman'],
+  ['diff', 'interlacing', 'reduce-diff', 'bbox', 'RLE'],
+  ['diff', 'interlacing', 'reduce-diff', 'bbox', 'globalHuffman'],
 ];
 
 // Load and diff all the images
-loadImages(movie, { start: 0, end: 6562 });
+loadImages(movie, { start: 0, end: 6562, step: 3 });
 diff(movie, {input: 'input', diffWith: 'input', encoded: 'diff'});
-generateCodebook(movie, { input: 'diff', maxBits: 16 });
+generateCodebook(movie, { input: 'diff', maxBits: 14, reduceDiff: true });
 const codebook = huffmanEncoder.encodedCodebook();
 
 // Encode the images and the diffs in all the ways defined in methods

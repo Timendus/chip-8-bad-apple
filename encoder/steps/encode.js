@@ -179,8 +179,8 @@ module.exports = function(movie, options) {
       'diff':          0,
       'bbox':          0,
       'RLE':           0,
-      'Huffman':       30,
-      'globalHuffman': 30,
+      'Huffman':       100,
+      'globalHuffman': 100,
       'singleBytes':   0,
       'reduce-diff':   100,
     };

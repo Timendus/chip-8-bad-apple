@@ -33,7 +33,7 @@
   #if HIRES
     ticks := 2 # 2/60th = 1/30th of a second = 30 FPS
   #else
-    ticks := 4 # 4/60th = 1/15th of a second = 15 FPS
+    ticks := 6 # 6/60th = 1/10th of a second = 10 FPS
   #end
   loop
     loop
