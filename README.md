@@ -11,8 +11,8 @@ music and all. It's a collaboration between
  * [The entry on Itch.io](https://timendus.itch.io/bad-apple)
  * [Download binaries](https://github.com/Timendus/chip-8-bad-apple/tree/main/bin)
  * Run the program in your browser:
-   * [Full version](https://timendus.github.io/bad-apple/full.html)
-     (Low resolution, low quality, but the whole thing)
+   * [Long runtime version](https://timendus.github.io/bad-apple/long-runtime.html)
+     (Low resolution, low quality, but longest runtime)
    * [High quality version](https://timendus.github.io/bad-apple/high-quality.html)
      (High resolution, high quality, but only a tiny part of it)
 
