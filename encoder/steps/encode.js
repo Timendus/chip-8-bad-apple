@@ -4,7 +4,8 @@ const {
   huffmanEncoder,
   interlacing,
   singleBytes,
-  scroll
+  scroll,
+  reduceDifference
 } = require('../lib');
 
 const {
@@ -62,14 +63,15 @@ module.exports = function(movie, options) {
       // Huffman/RLE encoding?
       const headerSize = chain.includes('bbox') ? 2 : 0;
       const interlaced = chain.includes('interlacing');
-      const scrolling = Object.keys(scrollDirections).reduce(
+      const reduced    = chain.includes('reduce-diff');
+      const scrolling  = Object.keys(scrollDirections).reduce(
         (a, m) => a | (chain.includes(m) ? scrollDirections[m] : 0),
         0
       );
 
-      // Skip interlaced chains for the first frame, otherwise the message gets
-      // garbled and unreadable
-      if ( frame.id == '000' && interlaced ) continue;
+      // Skip interlaced and reduced diff chains for the first frame, otherwise
+      // the message gets garbled and unreadable
+      if ( frame.id == '000' && (interlaced || reduced) ) continue;
 
       let encoded = frame[options.input];
       for ( const method of chain )
@@ -117,6 +119,7 @@ module.exports = function(movie, options) {
       case 'scroll-down-2': savedDisplay.push(display); display = scroll(display, options.width, interlaced, oddRow, 'down', 2); return data;
       case 'interlacing':   return interlacing.encode(data, options.width, oddRow);
       case 'diff':          return data.map((byte, i) => byte ^ display[i]);
+      case 'reduce-diff':   return reduceDifference.encode(data);
       case 'bbox':          return boundingBox.encode(data, options.width, interlaced);
       case 'RLE':           return split(data, headerSize, rle.encode);
       case 'Huffman':       return split(data, headerSize, huffmanEncoder.encodeWithCodebook);
@@ -136,6 +139,7 @@ module.exports = function(movie, options) {
       case 'scroll-down-2': display = savedDisplay.pop(); return data;
       case 'interlacing':   return interlacing.decode(data, options.width, oddRow, new Array(dataLength).fill(0));
       case 'diff':          return data.map((byte, i) => byte ^ display[i]);
+      case 'reduce-diff':   return reduceDifference.decode(data);
       case 'bbox':          return boundingBox.decode(new Array(dataLength).fill(0), data, options.width, interlaced);
       case 'RLE':           return split(data, headerSize, rle.decode);
       case 'Huffman':       return split(data, headerSize, huffmanEncoder.decodeWithCodebook);
@@ -178,6 +182,7 @@ module.exports = function(movie, options) {
       'Huffman':       30,
       'globalHuffman': 30,
       'singleBytes':   0,
+      'reduce-diff':   100,
     };
     return Math.max(...method.map(v => lossyness[v]));
   }

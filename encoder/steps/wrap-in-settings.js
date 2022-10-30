@@ -16,6 +16,7 @@ module.exports = function(movie, options) {
     'bbox':          1 << 4,
     'interlacing':   1 << 3,
     'singleBytes':   (1 << 5) + (1 << 6),
+    'reduce-diff':   0,
 
     'scroll-left':   1 << 0,
     'scroll-right':  1 << 0,

@@ -1,4 +1,5 @@
 const huffman = require('../lib/huffman-encoder.js');
+const reduceDifference = require('../lib/reduce-difference.js');
 const {assert, arrayDifference} = require('../lib/helpers.js');
 
 module.exports = function(movie, options) {
@@ -6,10 +7,15 @@ module.exports = function(movie, options) {
   options = Object.assign({
     input: 'input',
     maxBits: 16,
-    complete: true
+    complete: true,
+    reduceDiff: false
   }, options);
 
-  const possibleValues = movie.filter(frame => frame[options.input])
-                              .map(frame => frame[options.input]).flat();
+  let possibleValues = movie.filter(frame => frame[options.input])
+                            .map(frame => frame[options.input]).flat();
+
+  if ( options.reduceDiff )
+    possibleValues = reduceDifference.encode(possibleValues);
+
   huffman.generateCodebook(possibleValues, options.maxBits, options.complete);
 };
