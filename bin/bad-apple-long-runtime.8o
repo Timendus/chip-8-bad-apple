@@ -1,4 +1,980 @@
-#data
+# Bad Apple for XO-CHIP, 2022
+# Written for OctoJam 9
+#  * Video encoding and decoding - Timendus
+#  * Music arrangement and coding - Kouzeru
+
+# +-----------------------------------------
+# | XO-Tracker v0.1.1 Clean Version
+# +-----------------------------------------
+# Code by Kouzeru, cut into pieces by Timendus 😄
+
+:macro loadSong m delayStart {
+  v0 := m  songLoadAddresses
+	:calc z { 255 - delayStart }
+	v0 := z  i := tickStates  save v0
+}
+
+:macro |> k { :pointer k }
+:macro buzzerpitch vX {  :byte  { 0xF0 + vX }  0x3A  }
+
+:macro mySongList {
+# +-----------------------------------
+# | Your song list goes here
+# +-----------------------------------
+  |> song-BadApple  # song 0
+
+# +-----------------------------------
+}
+
+#+--------------------------------------------------------
+#| MISCELLANEOUS THINGS,
+#| In order to make easy of music making, some inputs are mapped here.
+#+--------------------------------------------------------
+
+# Note key name mappings
+  :macro ... { 0   } # blank/continue
+  :macro --- { 1   } # mute
+  :macro === { 2   } # jump next
+
+# Precise pitch table according to corresponding standard note key
+  :macro G$1 { 3   } :macro C-3 { 67  } :macro E-4 { 131 } :macro G$5 { 195 }
+  :macro A-1 { 7   } :macro C$3 { 71  } :macro F-4 { 135 } :macro A-5 { 199 }
+  :macro A$1 { 11  } :macro D-3 { 75  } :macro F$4 { 139 } :macro A$5 { 203 }
+  :macro B-1 { 15  } :macro D$3 { 79  } :macro G-4 { 143 } :macro B-5 { 207 }
+  :macro C-2 { 19  } :macro E-3 { 83  } :macro G$4 { 147 } :macro C-6 { 211 }
+  :macro C$2 { 23  } :macro F-3 { 87  } :macro A-4 { 151 } :macro C$6 { 215 }
+  :macro D-2 { 27  } :macro F$3 { 91  } :macro A$4 { 155 } :macro D-6 { 219 }
+  :macro D$2 { 31  } :macro G-3 { 95  } :macro B-4 { 159 } :macro D$6 { 223 }
+  :macro E-2 { 34  } :macro G$3 { 99  } :macro C-5 { 163 } :macro E-6 { 227 }
+  :macro F-2 { 39  } :macro A-3 { 103 } :macro C$5 { 167 } :macro F-6 { 231 }
+  :macro F$2 { 43  } :macro A$3 { 107 } :macro D-5 { 171 } :macro F$6 { 235 }
+  :macro G-2 { 47  } :macro B-3 { 111 } :macro D$5 { 175 } :macro G-6 { 239 }
+  :macro G$2 { 51  } :macro C-4 { 115 } :macro E-5 { 179 } :macro G$6 { 243 }
+  :macro A-2 { 55  } :macro C$4 { 119 } :macro F-5 { 183 } :macro A-6 { 247 }
+  :macro A$2 { 59  } :macro D-4 { 123 } :macro F$5 { 187 } :macro A$6 { 251 }
+  :macro B-2 { 63  } :macro D$4 { 127 } :macro G-5 { 191 } :macro B-6 { 255 }
+
+# Predefined sample keys
+  :macro defS z n { :macro z l { :byte { ( l & 3 ) | ( n << 2 ) } } }
+  defS -.. 0x0   defS A.. 0x10   defS B.. 0x20   defS C.. 0x30
+  defS -.H 0x1   defS A.H 0x11   defS B.H 0x21   defS C.H 0x31
+  defS -.K 0x2   defS A.K 0x12   defS B.K 0x22   defS C.K 0x32
+  defS -.S 0x3   defS A.S 0x13   defS B.S 0x23   defS C.S 0x33
+  defS -J. 0x4   defS AJ. 0x14   defS BJ. 0x24   defS CJ. 0x34
+  defS -JH 0x5   defS AJH 0x15   defS BJH 0x25   defS CJH 0x35
+  defS -JK 0x6   defS AJK 0x16   defS BJK 0x26   defS CJK 0x36
+  defS -JS 0x7   defS AJS 0x17   defS BJS 0x27   defS CJS 0x37
+  defS -I. 0x8   defS AI. 0x18   defS BI. 0x28   defS CI. 0x38
+  defS -IH 0x9   defS AIH 0x19   defS BIH 0x29   defS CIH 0x39
+  defS -IK 0xA   defS AIK 0x1A   defS BIK 0x2A   defS CIK 0x3A
+  defS -IS 0xB   defS AIS 0x1B   defS BIS 0x2B   defS CIS 0x3B
+  defS -D. 0xC   defS AD. 0x1C   defS BD. 0x2C   defS CD. 0x3C
+  defS -DH 0xD   defS ADH 0x1D   defS BDH 0x2D   defS CDH 0x3D
+  defS -DK 0xE   defS ADK 0x1E   defS BDK 0x2E   defS CDK 0x3E
+  defS -DS 0xF   defS ADS 0x1F   defS BDS 0x2F   defS CDS 0x3F
+# User defined sample keys
+	defS U-0 4     defS U-1 5      defS U-2 6      defS U-3 7
+  defS U-4 8     defS U-5 9      defS U-6 10     defS U-7 11
+  defS U-8 12    defS U-9 13     defS U-A 14     defS U-B 15
+
+
+:alias ticks vA
+:alias current-frame-hi vB
+:alias current-frame-lo vC
+:alias playing vD
+:alias frames-per-image vE
+
+:const STOPPED 0
+:const PLAYING 1
+:const STEPPING 2
+
+: main
+  clear
+  loadSong 0 70 # or 65?
+  :alias unpack-hi current-frame-hi
+  :alias unpack-lo current-frame-lo
+    :unpack long bad_apple_000
+    playing := STEPPING
+  frames-per-image := 0
+  delay := frames-per-image # Reset timing
+
+: main-loop
+  # This loop syncs to 15FPS and does the high-frequency stuff
+    ticks := 4 # 4/60th = 1/15th of a second = 15 FPS
+  loop
+    loop
+      # Handle key input
+      vF := 6
+      if vF key begin
+        v0 := PLAYING
+        playing ^= v0 # Play / pause the video
+        loop if vF key then again
+      end
+      vF := 9
+      if vF key begin
+        playing := STEPPING
+        loop if vF key then again
+      end
+      vF := 4
+      if vF key then jump main  # Restart the video
+
+      # Are we playing?
+      if playing == STOPPED begin
+        vF := 0
+        buzzer := vF
+        jump main-loop
+      end
+
+      # Wait for one display refresh
+      vF := delay
+      if vF != 0 then
+    again
+    vF := 1
+    delay := vF
+
+    # Play the music, which destroys every register under the sun
+    i := safe-storage  save vA - vE
+    songPlayNextTick
+    i := safe-storage  load vA - vE
+
+    ticks -= 1
+    if ticks != 0 then
+  again
+
+  # From here on down we know we're running this code at 15FPS
+
+  # If we're stepping, stop after this frame
+  if playing == STEPPING then playing := STOPPED
+
+  # Do we have any duplicate frames left to play?
+  if frames-per-image != 0 begin
+    frames-per-image -= 1
+    jump main-loop
+  end
+
+  # Show the next frame on the screen
+  frames-per-image := 0
+  get-frame-pointer
+  decode
+
+  # Are we done..?
+  :alias unpack-hi v2
+  :alias unpack-lo v3
+  :unpack long the-end
+  if current-frame-hi != v2 then jump main-loop
+  if current-frame-lo != v3 then jump main-loop
+
+  # We're done! 🎉
+  vF := 0
+  buzzer := vF
+  loop
+    vF := 4
+    if vF key then jump main  # Restart the video
+  again
+
+# Get pointer to current frame in i
+: get-frame-pointer
+  i := smc-load-current-frame
+  save current-frame-hi - current-frame-lo
+  0xF0 0x00 # i := long ...
+: smc-load-current-frame
+  0 0
+  return
+
+# Move frame pointer vF bytes
+: update-frame-pointer
+  current-frame-lo += vF
+  current-frame-hi += vF
+  return
+
+: safe-storage
+  0 0 0 0 0 0
+: safe-storage2
+  0 0 0 0
+
+# +-----------------------------------------
+# | XO-Tracker v0.1.1 Clean Version
+# +-----------------------------------------
+# Code by Kouzeru, cut into pieces by Timendus 😄
+
+: songPlayNextTick
+  songUpdateTick
+  songUpdateFrame
+  songUpdateBuzzer
+  return
+
+: songUpdateTick
+	i := tickRate  load v1  v1 += v0  i := tickRate  save v1  loop
+		vF := 60  v1 -= vF  if vF == 0 then  return  i := tickRate  save v1
+		i := tickStates  load v1  v0 += 1  i := tickStates  save v0
+	if v0 == v1 then  jump songStep  i := tickRate  load v1  again
+
+: songStepRowNext  v2 := 0  : songStepRow
+  i := tickStates  save v2  advanceSeqRefData
+: songStep  # advance row position of song
+  # Jump to next frame when row length is reached or jump command is found
+    i := tickStates  load v3  if v2 == v3 then  jump songStepRowNext
+		i:=seqRefData  load v1  v2 := v1  if v0 == 2 then  jump songStepRow
+  # Apply pitch and apply samples when the command is defined as note key
+    if v0 != 0 begin  if v0 == 1 begin  v2 := 0  v3 := 0  else
+    v1 >>= v1  v1 >>= v1  i := long instrSet  i += v1  i += v1
+		load v2 - v3  i := curBuzz  v1 := v0  save v1  end
+		v0 := 1  v1 := 1  i := curSamp  save v3  end
+  # Update tickrate
+	  i := tickStates  load v2  v3 := v1
+    i:=seqRefData  load v1  v0 := 3  v0 &= v1
+		i := tickSelect  save v0
+    i:=songProp  i += v0  load v1 - v1  v0 := 0
+		i := tickStates  v2 += 1  save v2
+		return
+
+: songUpdateFrame  # uses v0-vF
+    i := curBuzz  load v7  # Load the current states
+		v7 >>= v7  if vF != 0 then  v7 += 128
+		v6 >>= v6  if vF != 0 then  v6 += 128
+  # Update counters first
+	  i := long ornData  i += v7  i += v7  load v9 - v9  i += v5  load vB - vB
+		i := long smpRef   i += v6  i += v6  load v8 - v8  i += v4  load vA - vA
+    i := curSamp  load v3  v1 += 1  if v1 == 16 then  v1 := v9
+		v0 += 1  if v0 == 16 then  v0 := v8  i := curSamp  save v1
+  # Accumulate the pitches and update the current pitch
+		v2 >>= vB  v3 := vF  i := curBuzz  load v0  v1 <<= v2
+		if v3 == 0 then  v1 += v0  i := curBuzz  save v1
+  # And update the current audio sample buffer
+    i := long smpData  i += vA  load vF
+    i := curSampData  save vF  return
+
+: songUpdateBuzzer  i := curBuzz  load v1  vF := 255
+  i := curSampData  audio buzzerpitch v1  buzzer := vF  return
+
+: advanceSeqRefData
+  i := seqRefLoop  load v3  i := seqRefPlay  load v1
+  v1 += 1  if v1 == 0 then  v0 += 1  i := seqRefLoop
+  if v1 == v3 begin  if v0 == v2 begin  load v1  end  end
+  i := seqRefPlay  save v1  : updateSeqRefData  seqRefsetI  load v0
+  i := long seqFrameLookUpTable  i += v0  i += v0  load v1
+  i := sRDW  save v1  return
+
+: songLoadAddresses
+  i := songChoosen  v1 := 128  save v1
+  i := songList  i += v0  i += v0  load v1
+	i := writePointer  save v1  setItoPointer  load v7
+  i := seqRefStart  save v5  i := seqRefPlay  save v1  i := lSL  save v4 - v5
+  i:=songProp  v0 := 5  i += v0  load v2 - v3  i := rowLength  save v2 - v3
+  v0 := v6  v1 := v7  i := long seqFrameLookUpTable  v3 := 0  v2 += v2
+  loop  save v1  v1 += v2  v0 += vF  v3 += 1  if v3 != 0 then again
+: songReset
+  i := zeroes load v7  i := curBuzz  save v7
+	i:=songProp  load v1 - v1  i := tickStates  save v2
+	i:=songProp  v0 := 4  i += v0  load v0  i := tickRate  save v0
+  i := seqRefStart  load v1  i := seqRefPlay  save v1
+	updateSeqRefData  return
+
+: setItoPointer
+  0xF0 0
+: writePointer 0 0
+  return
+: programSize
+
+: i:=seqRefData   0xF0 00  : sRDW 0 0  i += v2  i += v2  return
+: i:=songProp  0xF0 0  : lSL  0 0  return
+
+: seqRefStart   0 0
+: seqRefLoop    0 0
+: seqRefEnd     0 0
+: seqRefsetI 0xF0 0
+: seqRefPlay    0 0 #current seq frame
+return
+
+:monitor seqRefPlay 2
+
+:calc z { HERE }
+: songList  mySongList
+
+: songListLen :byte { ( HERE - z ) / 2 }
+: songChoosen  0
+: songDispDur  0
+
+: curBuzz # Current state of pitch
+  0 # original
+  0 # altered pitch, being used in buzzpitch
+  0 #
+  0 #
+: curSamp  # Current states of sampRef and orn
+  0 # sampRef counter
+  0 # ornament counter
+  0 # sampRef offset
+  0 # ornament offset
+
+:monitor curBuzz 4
+:monitor curSamp 4
+
+: tickStates 0  # current frames in tick
+: tickLength 0  # current frames per tick
+: rowStates  0  # current row in frame
+: rowLength  0  # current row per frame
+: rowsPerQN  0  # row per quarter note
+: tickSelect 0  # current tick selected
+: tickRate   0  # current ticks per second
+: tickSub    0  # current subticks
+
+:monitor tickStates 2
+:monitor rowStates 2
+
+: curSampData # current sample data being played
+  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+
+: zeroes  0 0 0 0
+          1 1 0 0 # for also song reset values
+
+# 16-BIT LSFR noise generator
+:calc  lsfrSeed { 18241 }
+:macro lsfr z { :calc z { ( ( ( ( z & 1 ) ^ ( ( z >> 1 ) & 1 ) ) << 15 ) | ( z >> 1 ) ) } }
+:macro lsfrShftNybble { lsfr lsfrSeed lsfr lsfrSeed lsfr lsfrSeed lsfr lsfrSeed }
+:macro NOIS { :byte { lsfrSeed } lsfrShftNybble lsfrShftNybble }
+
+:macro ---- { 0b00000000 }
+:macro &--- { 0b11000000 }
+:macro &&-- { 0b11110000 }
+:macro &&&- { 0b11111100 }
+:macro &&&& { 0b11111111 }
+
+# +-----------------------------------------
+# | XO-Tracker v0.1.1 Clean Version
+# +-----------------------------------------
+
+# Song: Bad Apple!! By Touhou / ZUN
+# 1bit arrangement by Kouzeru
+# Code by Kouzeru, cut into pieces by Timendus 😄
+
+:alias X v2
+:alias Y v3
+:alias startX v4
+:alias width v5
+:alias height v6
+:alias stride v7
+
+  :const HORIZ_MARGIN 8
+  :const OUTPUT_WIDTH 48
+  :const OUTPUT_HEIGHT 32
+:calc HORIZ_END { HORIZ_MARGIN + OUTPUT_WIDTH }
+
+# Decode the next frame, pointed to by i
+# Don't mess up vB - vE, make sure we update frame pointer
+: decode
+  # Load settings byte
+  load v0
+  v2 := 1           # Number of bytes consumed so far
+
+  # Is this a repeated frame?
+  v1 := 2
+  v1 &= v0
+  if v1 != 0 begin
+    load frames-per-image - frames-per-image
+    vF := 1
+    i += vF
+    v2 += 1         # Update number of bytes consumed so far
+  end
+
+  # Register number of bytes consumed so far
+  vF := v2
+  update-frame-pointer
+
+  # Is this a diff? Or do we need to clear the screen?
+  v1 := 128
+  v1 &= v0
+  if v1 == 0 then clear
+
+  # Is the bounding box enabled?
+  v1 := 16
+  v1 &= v0
+  if v1 == 0 begin
+    # No bbox, so do the whole screen
+    X := HORIZ_MARGIN
+    Y := 0
+    startX := HORIZ_MARGIN
+    width := HORIZ_END
+    height := OUTPUT_HEIGHT
+  else
+    # Decode bbox coordinates from the next two bytes
+    load v8 - v9
+    vF := 2         # This load doesn't post-increment in XO-CHIP
+    i += vF
+    vF := 2
+    update-frame-pointer
+
+    Y := 31         # Take bottom 5 bits for minY and maxY
+    Y &= v8
+    height := 31
+    height &= v9
+    vF := 1
+    height += vF    # maxY is *inclusive*
+    v1 := 0xE0      # Take the top three bits for minX and maxX
+    v8 &= v1  v8 >>= v8  v8 >>= v8  # Shift down and convert from bytes to pixels
+    v9 &= v1  v9 >>= v9  v9 >>= v9
+
+    startX := HORIZ_MARGIN
+    startX += v8
+    X := startX
+    width := HORIZ_MARGIN
+    width += v9
+    width += 8      # maxX is *inclusive*
+  end
+
+  # Is this an interlaced frame?
+  v1 := 8
+  v1 &= v0
+  stride := 1
+  if v1 != 0 begin
+    stride := 2
+    # # Is this an odd frame?
+    v1 := 4
+    v1 &= v0
+    if v1 != 0 begin
+      Y += 1
+      height += 1
+    end
+  end
+
+
+  # Is this frame RLE compressed?
+  v1 := 64
+  v1 &= v0
+  if v1 != 0 then jump rle-decode
+
+  # Is this frame Huffman compressed?
+  v1 := 32
+  v1 &= v0
+  if v1 != 0 then jump huffman-decode
+
+  # Else: Fall through to plain copy
+
+# XOR the data at i directly to the screen
+# Don't mess up vB - vE, make sure we update frame pointer
+: plain-copy
+  loop
+    sprite X Y 1
+    vF := 1
+    i += vF
+    vF := 1
+    update-frame-pointer
+    next-coordinate
+    if Y < height then
+  again
+  return
+
+# Do the RLE decoding
+# i points to the first run length
+# Don't mess up vB - vE, make sure we update frame pointer
+: rle-decode
+  loop
+    load v0
+    vF := 1
+    update-frame-pointer
+    v1 := 128
+    v1 &= v0
+    vF := 127
+    v0 &= vF
+
+    if v1 == 0 begin
+      # This is a repeating run, sprite i to the screen v0 times
+      loop
+        sprite X Y 1
+        next-coordinate
+        v0 -= 1
+        if v0 != 0 then
+      again
+      vF := 1
+      i += vF
+      vF := 1
+      update-frame-pointer
+    else
+      # This is a copy run, sprite each byte to the screen
+      vF := v0
+      update-frame-pointer
+      loop
+        sprite X Y 1
+        vF := 1
+        i += vF
+        next-coordinate
+        v0 -= 1
+        if v0 != 0 then
+      again
+    end
+
+    if Y < height then
+  again
+  return
+
+
+: next-coordinate
+  X += 8
+  if X != width then return
+  X := startX
+  Y += stride
+  return
+
+# # Do the sprite-based decoding
+# # i points to the sprite data
+# # Don't mess up vB - vE, make sure we update frame pointer
+# : spriting-decode
+#   load v4 - v4   # This load doesn't post-increment in XO-CHIP
+#   vF := 1
+#   i += vF
+#   vF := 1
+#   update-frame-pointer
+#   loop
+#     load v1
+#     #if SCHIP
+#       vF := 2
+#       i += vF
+#     #end
+#     # Decode frame pointer
+#     i := long dictionary
+#     i += v1  i += v1  i += v1  i += v1
+#     i += v1  i += v1  i += v1  i += v1
+#     # Decode coordinates
+#     v1 := 0xF
+#     v1 &= v0
+#     v1 <<= v1  v1 <<= v1  v1 <<= v1
+#     vF := 0xF0
+#     v0 &= vF
+#     v0 >>= v0
+#     vF := 8
+#     v0 += vF
+#     # Sprite!
+#     sprite v0 v1 8
+#
+#     # Prepare for next sprite
+#     vF := 2
+#     update-frame-pointer
+#     get-frame-pointer
+#     v4 -= 1
+#     if v4 != 0 then
+#   again
+#   return
+
+:alias bitpointer v1
+:alias temp v0
+
+:alias value-hi v7
+:alias value-lo v8
+:alias code-hi v4
+:alias code-lo v5
+
+:alias numToGo v3
+:alias bitsLength v9
+:alias index vA
+:alias bits v6
+
+:alias mask-hi vB
+:alias mask-lo vC
+:alias addition-hi vD
+:alias addition-lo vE
+
+# Don't mess up v2 - v6 and vB - vE, make sure we update frame pointer
+: huffman-decode
+  bitpointer := 0 # Value 0 - 7 that tells us the bit offset
+  loop
+    # Free up a couple of registers
+    i := safe-storage
+    save v2 - v7
+    i := safe-storage2
+    save vB - vE
+
+    # Load the bits to decode from the compressed data
+    get-frame-pointer  # Point i to current data byte
+    load v7 - v9
+    # Shift the three loaded bytes so the first bit is the next value to decode
+    temp := bitpointer
+    loop
+      while temp != 0
+      temp -= 1
+      v7 <<= v7
+      v8 <<= v8
+      v7 += vF
+      v9 <<= v9
+      v8 += vF
+    again
+    # v7 and v8 (value-hi and value-lo) now hold the next 16 bits to decode,
+    # v0 and v9 are free again
+
+    # Now we start the search for the right value given these 16 bits
+    i := long huffman-codebook
+    load bitsLength - bitsLength
+    bits := 1
+    index := 1
+    code-hi := 0
+    code-lo := 0
+    mask-hi := 128
+    mask-lo := 0
+    addition-hi := 128
+    addition-lo := 0
+    loop
+      i := long huffman-codebook
+      i += bits
+      load numToGo - numToGo
+      loop
+        while numToGo != 0
+        numToGo -= 1
+        # Compare first 'bits' bits of 'value' to 'code'
+        temp := code-hi
+        temp ^= value-hi
+        temp &= mask-hi
+        if temp == 0 begin
+          temp := code-lo
+          temp ^= value-lo
+          temp &= mask-lo
+          if temp == 0 then jump huffman-decode-found-value
+        end
+        index += 1
+        code-hi += addition-hi
+        code-lo += addition-lo
+        code-hi += vF
+      again
+      # "code <<= 1", but done by adding a lower value to it
+      addition-lo >>= addition-lo
+      addition-hi >>= addition-hi
+      if vF != 0 then addition-lo += 128
+
+      # Fill up mask
+      mask-lo += addition-lo
+      mask-hi += addition-hi
+
+      bits += 1
+      if bits <= bitsLength then
+    again
+
+    # We should never get here. If we do, that's an error in the data
+    loop again
+
+: huffman-decode-found-value
+    # Restore these registers so we can update the frame pointer
+    i := safe-storage2
+    load vB - vE
+    # How many bits have we processed?
+    bitpointer += bits
+    # Have we processed so many bits that we can update the frame pointer?
+    loop
+      while bitpointer > 7
+      bitpointer -= 8
+      vF := 1
+      update-frame-pointer
+    again
+
+    # Restore these registers so we can use and update the screen coordinates
+    i := safe-storage
+    load v2 - v7
+
+    # Point i to the correct byte, show it on screen
+    i := long huffman-codebook
+    i += bitsLength
+    i += index
+    sprite X Y 1
+
+    # Update screen location and check if we're done
+    next-coordinate
+    if Y < height then
+  again
+
+  vF := 1
+  update-frame-pointer
+  return
+
+# # Compute the first 100 entries in the Huffman codebook and save them to the
+# # memory below 0x200 🙈
+#
+# :alias pc-temp v0
+# :alias pc-bits v1
+# :alias pc-code-hi v2
+# :alias pc-code-lo v3
+#
+# :alias pc-addition-hi v4
+# :alias pc-addition-lo v5
+#
+# :alias pc-index v6
+# :alias pc-num v7
+# :alias pc-numToGo v8
+# :alias pc-bitsLength v9
+#
+# : huffman-precompute-table
+#   i := long huffman-codebook
+#   load pc-bitsLength - pc-bitsLength
+#   i := huffman-precompute-values
+#   load v7
+#   # pc-bits := 1
+#   # pc-code-hi := 0
+#   # pc-code-lo := 0
+#   # pc-addition-hi := 128
+#   # pc-addition-lo := 0
+#   # pc-index := 1
+#   # pc-num := 0
+#   loop
+#     i := long huffman-codebook
+#     i += pc-bits
+#     load pc-numToGo - pc-numToGo
+#     loop
+#       while pc-numToGo != 0
+#       pc-numToGo -= 1
+#       # Store bits, code and corresponding value
+#       # Fetch value
+#       i := long huffman-codebook
+#       i += pc-bitsLength
+#       i += pc-index
+#       load pc-temp
+#       i := 0
+#       i += pc-num  i += pc-num
+#       i += pc-num  i += pc-num
+#       save v3
+# 			pc-num += 1
+#       if pc-num == 128 then return
+#       pc-index += 1
+#       pc-code-hi += pc-addition-hi
+#       pc-code-hi += pc-addition-hi
+#       pc-code-lo += pc-addition-lo
+#       pc-code-hi += vF
+#     again
+#     # "code <<= 1", but done by adding a lower value to it
+#     pc-addition-lo >>= pc-addition-lo
+#     pc-addition-hi >>= pc-addition-hi
+#     if vF != 0 then pc-addition-lo += 128
+#
+#     pc-bits += 1
+#     if pc-bits <= pc-bitsLength then
+#   again
+#   :breakpoint loop-done
+#   return
+#
+# : huffman-precompute-values
+#   0 1 0 0 128 0 1 0
+#
+
+
+
+: smpData  # SAMPLE BUFFER DATA  [ 128 bytes ]
+  ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----  # 0x00 |        Silence
+  &&-- ---- ---- ---- &&-- ---- ---- ---- &&-- ---- ---- ---- &&-- ---- ---- ----  # 0x10 |  12.5% Pulse Duty
+  &&&& ---- ---- ---- &&&& ---- ---- ---- &&&& ---- ---- ---- &&&& ---- ---- ----  # 0x20 |  25.0% Pulse Duty
+  &&&& &&&& ---- ---- &&&& &&&& ---- ---- &&&& &&&& ---- ---- &&&& &&&& ---- ----  # 0x30 |  50.0% Pulse Duty
+  NOIS NOIS NOIS NOIS NOIS NOIS NOIS NOIS ---- ---- ---- ---- ---- ---- ---- ----  # 0x40 |  50.0% Pulse Noise
+  NOIS NOIS NOIS NOIS NOIS NOIS NOIS NOIS NOIS NOIS NOIS NOIS NOIS NOIS NOIS NOIS  # 0x50 | 100.0% Pulse Noise
+  NOIS NOIS NOIS NOIS NOIS NOIS NOIS NOIS NOIS NOIS NOIS NOIS NOIS NOIS NOIS NOIS  # 0x60 | 100.0% Pulse Noise
+  NOIS NOIS NOIS NOIS NOIS NOIS NOIS NOIS NOIS NOIS NOIS NOIS NOIS NOIS NOIS NOIS  # 0x70 | 100.0% Pulse Noise
+	&&&& &&&- ---- ---- &&&& &&&- ---- ---- &&&& &&&- ---- ---- &&&& &&&- ---- ----  # 0x80 | 43.25% Pulse Duty
+	&&&& &&-- ---- ---- &&&& &&-- ---- ---- &&&& &&-- ---- ---- &&&& &&-- ---- ----  # 0x90 | 37.50% Pulse Duty
+	&&&& &--- ---- ---- &&&& &--- ---- ---- &&&& &--- ---- ---- &&&& &--- ---- ----  # 0xA0 | 31.75% Pulse Duty
+	&&&- ---- ---- ---- &&&- ---- ---- ---- &&&- ---- ---- ---- &&&- ---- ---- ----  # 0xB0 | 18.25% Pulse Duty
+
+: instrSet     # SAMPLE AND ORNAMENT SEQUENCE MAPPER [ 128 bytes ]
+#    0          1          2          3          4          5          6          7
+#          8          9         10         11         12         13         14         15
+# __________ __________ __________ __________ __________ __________ __________ __________
+#| smpI ornI| smpI ornI| smpI ornI| smpI ornI| smpI ornI| smpI ornI| smpI ornI| smpI ornI|
+  0x00 0x00  0x10 0x10  0x20 0x20  0x30 0x30  0x80 0x01  0x80 0x11  0xC0 0x01  0xC0 0x11  # Silence + HKS & 12
+  0x01 0x00  0x11 0x10  0x21 0x20  0x31 0x30  0x01 0x21  0x40 0x21  0x80 0x21  0xC0 0x21  # User-def instruments
+  0x40 0x00  0x50 0x10  0x60 0x20  0x70 0x30  0x40 0x40  0x50 0x50  0x60 0x60  0x70 0x70  # 12.5% Lead + HKS +
+  0x40 0x80  0x50 0x90  0x60 0xA0  0x70 0xB0  0x40 0xC0  0x50 0xD0  0x60 0xE0  0x70 0xF0  # maj-min-dim chords
+  0x80 0x00  0x90 0x10  0xA0 0x20  0xB0 0x30  0x80 0x40  0x90 0x50  0xA0 0x60  0xB0 0x70  # 25.0% Lead + HKS +
+  0x80 0x80  0x90 0x90  0xA0 0xA0  0xB0 0xB0  0x80 0xC0  0x90 0xD0  0xA0 0xE0  0xB0 0xF0  # maj-min-dim chords
+  0xC0 0x00  0xD0 0x10  0xE0 0x20  0xF0 0x30  0xC0 0x40  0xD0 0x50  0xE0 0x60  0xF0 0x70  # 50.0% Lead + HKS +
+  0xC0 0x80  0xD0 0x90  0xE0 0xA0  0xF0 0xB0  0xC0 0xC0  0xD0 0xD0  0xE0 0xE0  0xF0 0xF0  # maj-min-dim chords
+
+: smpRef    # SAMPLE SEQUENCE DATA [ 256 bytes ]
+# Loop    1    2    3    4    5    6    7    8    9   10   11   12   13   14   15
+#  PREDEFINED SAMPLE DATA
+   15  0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00  # [0x00] Silence
+   15  0x70 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00  # [0x10] Hat only
+   15  0x50 0x40 0x30 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00  # [0x20] Kick only
+   15  0x70 0x60 0x50 0x40 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00  # [0x30] Snare only
+   15  0x10 0x10 0x10 0x10 0x10 0x10 0x10 0x10 0x10 0x10 0x10 0x10 0x10 0x10 0x10  # [0x40] 12.5 % Pulse Tone
+   15  0x70 0x10 0x10 0x10 0x10 0x10 0x10 0x10 0x10 0x10 0x10 0x10 0x10 0x10 0x10  # [0x50] Hat + 12.5 % Pulse
+   15  0x50 0x40 0x30 0x10 0x10 0x10 0x10 0x10 0x10 0x10 0x10 0x10 0x10 0x10 0x10  # [0x60] Kick + 12.5 % Pulse
+   15  0x70 0x60 0x50 0x40 0x10 0x10 0x10 0x10 0x10 0x10 0x10 0x10 0x10 0x10 0x10  # [0x70] Snare + 12.5 % Pulse
+   15  0x20 0x20 0x20 0x20 0x20 0x20 0x20 0x20 0x20 0x20 0x20 0x20 0x20 0x20 0x20  # [0x80] 25 % Pulse Tone
+   15  0x70 0x20 0x20 0x20 0x20 0x20 0x20 0x20 0x20 0x20 0x20 0x20 0x20 0x20 0x20  # [0x90] Hat + 25 % Pulse
+   15  0x50 0x40 0x30 0x20 0x20 0x20 0x20 0x20 0x20 0x20 0x20 0x20 0x20 0x20 0x20  # [0xA0] Kick + 25 % Pulse
+   15  0x70 0x60 0x50 0x40 0x20 0x20 0x20 0x20 0x20 0x20 0x20 0x20 0x20 0x20 0x20  # [0xB0] Snare + 25 % Pulse
+   15  0x30 0x30 0x30 0x30 0x30 0x30 0x30 0x30 0x30 0x30 0x30 0x30 0x30 0x30 0x30  # [0xC0] 50 % Pulse Tone
+   15  0x70 0x30 0x30 0x30 0x30 0x30 0x30 0x30 0x30 0x30 0x30 0x30 0x30 0x30 0x30  # [0xD0] Hat + 50 % Pulse
+   15  0x50 0x40 0x30 0x30 0x30 0x30 0x30 0x30 0x30 0x30 0x30 0x30 0x30 0x30 0x30  # [0xE0] Kick + 50 % Pulse
+   15  0x70 0x60 0x50 0x40 0x30 0x30 0x30 0x30 0x30 0x30 0x30 0x30 0x30 0x30 0x30  # [0xF0] Snare + 50 % Pulse
+#  USER DEFINED SAMPLE DATA
+    8  0x20 0xA0 0x90 0x80 0x30 0x80 0x90 0xA0 0x20 0xA0 0x90 0x80 0x30 0x80 0x90  # [0x01] 25%-50% PWM Tone
+		8  0x70 0xA0 0x90 0x80 0x30 0x80 0x90 0xA0 0x20 0xA0 0x90 0x80 0x30 0x80 0x90  # [0x11] Hat + 25%-50% PWM
+		8  0x50 0x40 0x30 0x80 0x30 0x80 0x90 0xA0 0x20 0xA0 0x90 0x80 0x30 0x80 0x90  # [0x21] Kick + 25%-50% PWM
+		8  0x70 0x60 0x50 0x40 0x30 0x80 0x90 0xA0 0x20 0xA0 0x90 0x80 0x30 0x80 0x90  # [0x31] Snare + 25%-50% PWM
+   #   theres no other samples needed beside above, hence nothing.
+
+: ornData   # ORNAMENT SEQUENCE DATA [ 256 bytes ]
+#       Odd values (e.g. 63 67 71 ) is fixed pitch alter.
+#       Even values (e.g 4 8 12 -4 -8 -12 ) is relative pitch alter.
+#       Zero value won't alter the current pitch.
+# Loop    1    2    3    4    5    6    7    8    9   10   11   12   13   14   15
+#  PREDEFINED ORNAMENTS DATA
+   13     0    0    0    0    0    0    0    0    0    0    0    0    0    0    0  # [0x00] Tone
+   13   211    0    0    0    0    0    0    0    0    0    0    0    0    0    0  # [0x10] Hat + tone
+   13   147  103   67    0    0    0    0    0    0    0    0    0    0    0    0  # [0x20] Kick + tone
+   13   107  171  159  147    0    0    0    0    0    0    0    0    0    0    0  # [0x30] Snare + tone
+   13    16   28    0   16   28    0   16   28    0   16   28    0   16   28    0  # [0x40] Major chord tone
+   13   211   16   28    0   16   28    0   16   28    0   16   28    0   16   28  # [0x50] Hat + major chord
+   13   147  103   67   16   28    0   16   28    0   16   28    0   16   28    0  # [0x60] Kick + major chord
+   13   107  171  159  147   16   28    0   16   28    0   16   28    0   16   28  # [0x70] Snare + major chord
+   13    12   28    0   12   28    0   12   28    0   12   28    0   12   28    0  # [0x80] Minor chord tone
+   13   211   12   28    0   12   28    0   12   28    0   12   28    0   12   28  # [0x90] Hat + minor chord
+   13   147  103   67   12   28    0   12   28    0   12   28    0   12   28    0  # [0xA0] Kick + minor chord
+   13   107  171  159  147   12   28    0   12   28    0   12   28    0   12   28  # [0xB0] Snare + minor chord
+   13    12   24    0   12   24    0   12   24    0   12   24    0   12   24    0  # [0xC0] Diminish chord tone
+   13   211   12   24    0   12   24    0   12   24    0   12   24    0   12   24  # [0xD0] Hat + diminish chord
+   13   147  103   67   12   24    0   12   24    0   12   24    0   12   24    0  # [0xE0] Kick + diminish chord
+   13   107  171  159  147   12   24    0   12   24    0   12   24    0   12   24  # [0xF0] Snare + diminish chord
+#  USER DEFINED ORNAMENTS DATA
+   15   -20  -16   -8    0    0    0    0    0    0    0    0    0    0    0    0  # [0x01] SlideUp
+   15    20   16    8    0    0    0    0    0    0    0    0    0    0    0    0  # [0x11] SlideDown
+   10     2    2    0   -2   -2    0    2    2    0   -2   -2    0    2    2    0  # [0x21] Vibratio
+
+: seqFrameLookUpTable
+:org { seqFrameLookUpTable + 512 }
+
+
+#+-----------------------+-----------------------+-----------------------+-----------------------+
+#| Song timeline         | Song loop point       | Song properties       | Song sequence data    |
+#+-----------------------+-----------------------+-----------------------+-----------------------+
+ :                                         song-BadApple
+ |>  seqTime-BadApple     |>  seqLoop-BadApple    |>  seqProp-BadApple    |>  seqData-BadApple
+
+################################################################
+#   IMPORTANT NOTE:
+#   Both seqTime and seqLoop must be paired for every song, and
+#   must be in order: seqTime, seqLoop, then last seqProp.
+
+#   If song has no loop, it has to loop within an empty frame
+
+: seqTime-BadApple # Song timeline of frames
+  0x00 0x01 0x00 0x01 0x00 0x01 0x00 0x02 0x03 0x04 0x03 0x05 0x03 0x04 0x03 0x06
+  0x07 0x08 0x09 0x0A 0x0B 0x0C 0x0D 0x0E 0x0F 0x08 0x09 0x0A 0x0B 0x0C 0x0D 0x10
+  0x11 0x12 0x13 0x14 0x15 0x16 0x17 0x18 0x19 0x12 0x13 0x14 0x15 0x16 0x17 0x1A
+  0x1B 0x1C 0x1D 0x1E 0x1F 0x20 0x21 0x22 0x23 0x1C 0x1D 0x1E 0x24 0x25 0x26 0x27
+  0x28 0x1C 0x1D 0x1E 0x1F 0x20 0x21 0x22 0x23 0x1C 0x1D 0x1E 0x24 0x25 0x26 0x27
+  0x28 0x29 0x2A 0x2B 0x2C 0x2D 0x2E 0x2F 0x30 0x29 0x2A 0x2B 0x2C 0x2D 0x2E 0x2F
+  0x30 0x29 0x2A 0x2B 0x2C 0x2D 0x2E 0x2F 0x30 0x29 0x2A 0x2B 0x31 0x32 0x33 0x34
+  0x35 0x03 0x04 0x03 0x05 0x03 0x04 0x03 0x06 0x07 0x08 0x09 0x0A 0x0B 0x0C 0x0D
+  0x0E 0x0F 0x08 0x09 0x0A 0x0B 0x0C 0x0D 0x10 0x11 0x12 0x13 0x14 0x15 0x16 0x17
+  0x18 0x19 0x12 0x13 0x14 0x15 0x16 0x17 0x3B 0x3C 0x1C 0x1D 0x1E 0x1F 0x20 0x21
+  0x22 0x23 0x1C 0x1D 0x1E 0x1F 0x20 0x21 0x22 0x3D 0x1C 0x1D 0x1E 0x1F 0x20 0x21
+  0x22 0x23 0x1C 0x1D 0x1E 0x24 0x25 0x26 0x27 0x3E 0x3F 0x40 0x41 0x42 0x43 0x44
+  0x45 0x46 0x3F 0x40 0x41 0x42 0x43 0x44 0x45 0x36 0x3F 0x40 0x41 0x42 0x43 0x44
+  0x45 0x46 0x3F 0x40 0x41 0x37 0x38 0x39 0x3A 0x47 0x48 0x48 0x48 0x48
+: seqLoop-BadApple # The song loop point
+  0x49
+
+
+: seqProp-BadApple # Song properties
+#  _______ _______ _______ _______
+# |Speed A|Speed B|Speed C|Speed D|
+   7       6       4       3
+#  __________________ ______________ _____________________
+# |Default tick rate |Rows per Frame|Rows per quarter note|
+   60                 16             4
+
+: seqData-BadApple
+# __________ __________ __________ __________ __________ __________ __________ __________ __________ __________ __________ __________ __________ __________ __________ __________ _______
+#| Row 0    | Row 1    | Row 2    | Row 3    | Row 4    | Row 5    | Row 6    | Row 7    | Row 8    | Row 9    | Row 10   | Row 11   | Row 12   | Row 13   | Row 14   | Row 15   | Frame |
+#|Key DOS G |Key DOS G |Key DOS G |Key DOS G |Key DOS G |Key DOS G |Key DOS G |Key DOS G |Key DOS G |Key DOS G |Key DOS G |Key DOS G |Key DOS G |Key DOS G |Key DOS G |Key DOS G |   #   |
+  C-3 -.K 0  ... -.. 1  C-2 -.H 0  C-2 -.H 1  C-3 -.S 0  ... -.. 1  C-2 -.H 0  C-2 -.H 1  C-3 -.K 0  ... -.. 1  C-2 -.H 0  C-2 -.H 1  C-3 -.S 0  C-3 -.S 1  C-3 -.S 0  C-3 -.S 1   # 0x00
+  C-3 -.K 0  ... -.. 1  C-2 -.H 0  C-2 -.H 1  C-3 -.S 0  ... -.. 1  C-2 -.H 0  C-2 -.H 1  C-3 -.K 0  ... -.. 1  C-2 -.H 0  C-2 -.H 1  C-3 -.S 0  ... -.. 1  C-3 -.S 0  ... -.. 1   # 0x01
+  C-3 -.K 0  ... -.. 1  C-2 -.H 0  C-2 -.H 1  C-3 -.S 0  ... -.. 1  C-2 -.H 0  C-2 -.H 1  C-3 -.K 0  ... -.. 1  C-2 -.H 0  ... -.. 1  C-3 -.H 0  ... -.. 1  ... -.. 0  ... -.. 1   # 0x02
+  D$2 U-6 0  ... -.. 1  C$3 U-5 0  D$3 U-5 1  D$3 U-7 0  D$3 U-4 1  C$3 U-5 0  D$3 U-5 1  D$2 U-6 0  ... -.. 1  C$3 U-5 0  D$3 U-5 1  D$3 U-7 0  D$3 U-7 1  C$3 U-7 0  D$3 U-7 1   # 0x03
+  D$2 U-6 0  ... -.. 1  C$3 U-5 0  D$3 U-5 1  D$3 U-7 0  D$3 U-4 1  C$3 U-5 0  D$3 U-5 1  D$2 U-6 0  ... -.. 1  D$3 U-5 0  F$3 U-5 1  F$2 U-7 0  ... -.. 1  F$3 U-7 0  G$3 U-5 1   # 0x04
+  D$2 U-6 0  ... -.. 1  C$3 U-5 0  D$3 U-5 1  D$3 U-7 0  D$3 U-4 1  C$3 U-5 0  D$3 U-5 1  G$2 U-6 0  ... -.. 1  F$3 U-5 0  G$3 U-5 1  F$2 U-7 0  ... -.. 1  D$3 U-7 0  F$3 U-5 1   # 0x05
+  D$2 U-6 2  ... -.. 3  ... -.. 3  ... -.. 3  C$3 U-5 2  ... -.. 3  D$3 U-5 3  ... -.. 3  D$3 U-7 2  ... -.. 3  D$3 U-4 3  ... -.. 3  C$3 U-5 2  ... -.. 3  D$3 U-5 3  ... -.. 3   # 0x06
+  G$2 U-7 3  ... -.. 3  ... -.. 3  G$2 U-7 3  F$3 U-4 3  ... -.. 3  G$3 U-7 2  ... -.. 2  F$2 U-7 3  ... -.. 3  ... -.. 3  F$2 U-7 3  D$3 U-4 3  ... -.. 3  F$3 U-7 2  ... -.. 2   # 0x07
+  D$4 C.K 2  D$2 U-4 3  D$4 C.. 3  ... -.. 3  F-4 C.H 2  C$3 U-4 3  F-4 C.H 3  D$3 U-4 3  F$4 C.S 2  ... -.. 3  F$4 C.. 3  D$3 U-4 3  G$4 C.H 2  C$3 U-4 3  G$4 C.. 3  D$3 U-4 3   # 0x08
+  A$4 C.K 2  D$2 U-4 3  A$4 B.. 3  ... -.. 3  A$4 C.H 2  C$3 U-4 3  F$4 B.H 3  D$3 U-4 3  D$5 C.S 2  ... -.. 3  ... -.. 3  D$3 U-4 3  C$5 C.H 2  C$3 U-4 3  C$5 B.. 3  D$3 U-4 3   # 0x09
+  A$4 C.K 2  D$2 U-4 3  A$4 B.. 3  ... -.. 3  A$4 C.H 2  C$3 U-4 3  D$5 B.H 3  D$3 U-4 3  D$4 C.S 2  ... -.. 3  ... -.. 3  D$3 U-4 3  D$4 C.H 2  C$3 U-4 3  A$4 B.. 3  D$3 U-4 3   # 0x0A
+  A$4 C.K 2  D$2 U-4 3  A$4 C.. 3  ... -.. 3  G$4 C.H 2  D$3 U-4 3  G$4 C.H 3  F$3 U-4 3  F$4 C.S 2  F$2 U-4 3  F$4 C.. 3  ... -.. 3  F-4 C.S 2  F$3 U-4 3  F-4 C.. 3  G$3 U-4 3   # 0x0B
+  D$4 C.K 2  B-1 U-4 3  D$4 C.. 3  ... -.. 3  F-4 C.H 2  C$3 U-4 3  F-4 C.H 3  D$3 U-4 3  F$4 C.S 2  ... -.. 3  F$4 C.. 3  D$3 U-4 3  G$4 C.H 2  C$3 U-4 3  G$4 C.. 3  D$3 U-4 3   # 0x0C
+  A$4 C.K 2  B-1 U-4 3  A$4 B.. 3  ... -.. 3  A$4 C.H 2  C$3 U-4 3  F$4 C.H 3  D$3 U-4 3  G$4 C.S 2  D$3 U-4 3  G$4 B.. 3  D$3 U-4 3  F$4 C.H 2  C$3 U-4 3  F$4 B.. 3  D$3 U-4 3   # 0x0D
+  F-4 C.K 2  C-2 U-4 3  G$4 B.. 3  ... -.. 3  D$4 C.H 2  C$3 U-4 3  F-4 B.H 3  D$3 U-4 3  F-4 C.S 2  D$3 U-4 3  D$4 B.. 3  D$3 U-4 3  F$4 C.H 2  C$3 U-4 3  F-4 B.. 3  D$3 U-4 3   # 0x0E
+  F-4 C.K 2  D-2 U-4 3  F$4 B.. 3  ... -.. 3  D$4 C.H 2  F$3 U-4 3  D$4 B.H 3  G$3 U-4 3  C$4 C.S 2  F$2 U-4 3  C$4 B.. 3  ... -.. 3  F-4 C.S 2  ... -.. 3  D$4 B.. 3  F$3 U-4 3   # 0x0F
+  F-4 C.K 2  C$2 U-4 3  F-4 B.. 3  ... -.. 3  F-4 C.H 2  C$3 U-4 3  G$4 C.H 3  D$3 U-4 3  F$4 C.S 2  ... -.. 3  ... -.. 3  D$3 U-4 3  F$4 C.H 2  C$3 U-4 3  F-4 C.. 3  D$3 U-4 3   # 0x10
+  G$4 C.S 3  D-2 U-4 3  G$4 A.. 3  G$4 U-7 3  ... -.. 3  F$4 B.. 3  F$3 U-7 2  G$3 U-4 2  A$4 B.S 3  F$2 U-4 3  A$4 B.. 3  A$4 U-7 3  ... -.. 3  D$3 U-4 3  G$4 B.S 2  F$3 U-4 2   # 0x11
+  D$4 B.K 2  D$2 U-4 3  D$4 C.. 3  G$4 BJ. 3  F-4 B.H 2  C$3 U-4 3  F-4 C.H 3  D$3 U-4 3  F$4 B.S 2  ... -.. 3  F$4 C.. 3  G$4 BJ. 3  G$4 B.H 2  C$3 U-4 3  G$4 C.. 3  D$3 U-4 3   # 0x12
+  A$4 B.K 2  D$2 U-4 3  A$4 B.. 3  G$4 BJ. 3  A$4 B.H 2  C$3 U-4 3  F$4 B.H 3  D$3 U-4 3  D$5 B.S 2  ... -.. 3  ... -.. 3  G$4 BJ. 3  C$5 B.H 2  C$3 U-4 3  C$5 B.. 3  D$3 U-4 3   # 0x13
+  A$4 B.K 2  D$2 U-4 3  A$4 B.. 3  G$4 BJ. 3  G$4 B.H 2  C$3 U-4 3  D$5 B.H 3  D$3 U-4 3  D$4 B.S 2  ... -.. 3  ... -.. 3  G$4 BJ. 3  D$4 B.H 2  C$3 U-4 3  A$4 B.. 3  D$3 U-4 3   # 0x14
+  A$4 B.K 2  D$2 U-4 3  A$4 C.. 3  G$4 BJ. 3  G$4 B.H 2  D$3 U-4 3  G$4 C.H 3  F$3 U-4 3  F$4 B.S 2  F$2 U-4 3  F$4 C.. 3  G$4 BJ. 3  F-4 B.S 2  F$3 U-4 3  F-4 C.. 3  G$3 U-4 3   # 0x15
+  D$4 B.K 2  D$2 U-4 3  D$4 C.. 3  E-4 BJ. 3  F-4 B.H 2  C$3 U-4 3  F-4 C.H 3  D$3 U-4 3  F$4 B.S 2  ... -.. 3  F$4 C.. 3  E-4 BJ. 3  G$4 B.H 2  C$3 U-4 3  G$4 C.. 3  D$3 U-4 3   # 0x16
+  A$4 B.K 2  B-1 U-4 3  A$4 B.. 3  E-4 BJ. 3  A$4 B.H 2  C$3 U-4 3  F$4 C.H 3  D$3 U-4 3  G$4 B.S 2  D$3 U-4 3  G$4 B.. 3  E-4 BJ. 3  F$4 B.H 2  C$3 U-4 3  F$4 B.. 3  D$3 U-4 3   # 0x17
+  F-4 B.K 2  C-2 U-4 3  G$4 B.. 3  F$4 BJ. 3  D$4 B.H 2  C$3 U-4 3  F-4 B.H 3  D$3 U-4 3  F-4 B.S 2  D$3 U-4 3  D$4 B.. 3  F$4 BJ. 3  F$4 B.H 2  C$3 U-4 3  F-4 B.. 3  D$3 U-4 3   # 0x18
+  F-4 B.K 2  D-2 U-4 3  F$4 B.. 3  G-4 BJ. 3  D$4 B.H 2  F$3 U-4 3  D$4 B.H 3  G$3 U-4 3  C$4 B.S 2  F$2 U-4 3  C$4 B.. 3  G-4 BJ. 3  F-4 B.S 2  ... -.. 3  D$4 B.. 3  F$3 U-4 3   # 0x19
+  F-4 B.K 2  C$2 U-4 3  F-4 B.. 3  F$4 BJ. 3  F-4 C.H 2  C$3 U-4 3  G$4 C.H 3  D$3 U-4 3  F$4 B.S 2  ... -.. 3  ... -.. 3  F$4 BJ. 3  F$4 C.H 2  C$3 U-4 3  F-4 C.. 3  D$3 U-4 3   # 0x1A
+  G$4 B.S 3  D-2 U-4 3  G$4 A.. 3  G$4 U-7 3  G-4 BJ. 3  F$4 B.. 3  F$3 U-7 2  G$3 U-4 2  A$4 B.S 3  F$2 U-4 3  A$4 B.. 3  A$4 U-7 3  G-4 BJ. 3  D$3 U-4 3  G$4 B.S 2  F$3 U-4 2   # 0x1B
+  C$5 B.K 2  D$2 U-4 3  C$5 B.. 3  E-4 BJ. 3  D$5 B.H 2  C$3 U-4 3  D$5 C.H 3  D$3 U-4 3  A$4 B.S 2  ... -.. 3  ... -.. 3  E-4 BJ. 3  G$4 B.H 2  C$3 U-4 3  G$4 B.. 3  D$3 U-4 3   # 0x1C
+  A$4 B.K 2  D$2 U-4 3  A$4 B.. 3  E-4 BJ. 3  E-4 BJH 2  C$3 U-4 3  D$5 C.H 3  D$3 U-4 3  G$4 B.S 2  ... -.. 3  ... -.. 3  E-4 BJ. 3  A$4 B.H 2  C$3 U-4 3  A$4 C.. 3  D$3 U-4 3   # 0x1D
+  C$5 B.K 2  D$2 U-4 3  C$5 B.. 3  F$4 BJ. 3  D$5 B.H 2  C$3 U-4 3  D$5 C.H 3  D$3 U-4 3  A$4 B.S 2  ... -.. 3  ... -.. 3  F$4 BJ. 3  G$4 B.H 2  C$3 U-4 3  G$4 B.. 3  D$3 U-4 3   # 0x1E
+  A$4 B.K 2  D$2 U-4 3  A$4 B.. 3  F$4 BJ. 3  F$4 B.H 2  D$3 U-4 3  D$5 C.H 3  F$3 U-4 3  G$4 B.S 2  F$2 U-4 3  G$4 B.. 3  F$4 BJ. 3  A$4 B.S 2  F$3 U-4 3  A$4 C.. 3  G$3 U-4 3   # 0x1F
+  G$4 B.K 2  B-1 U-4 3  G$4 B.. 3  G$4 BJ. 3  F$4 B.H 2  C$3 U-4 3  F$4 B.H 3  D$3 U-4 3  F-4 B.S 2  ... -.. 3  ... -.. 3  G$4 BJ. 3  C$4 B.H 2  C$3 U-4 3  C$4 B.. 3  D$3 U-4 3   # 0x20
+  D$4 B.K 2  B-1 U-4 3  D$4 B.. 3  G$4 BJ. 3  G$4 B.H 2  C$3 U-4 3  F$4 C.H 3  D$3 U-4 3  C$4 B.S 2  ... -.. 3  ... -.. 3  G$4 BJ. 3  D$4 B.H 2  C$3 U-4 3  D$4 C.. 3  D$3 U-4 3   # 0x21
+  F-4 B.K 2  C$2 U-4 3  F-4 B.. 3  G$4 BJ. 3  F$4 B.H 2  C$3 U-4 3  F$4 B.H 3  D$3 U-4 3  G$4 B.S 2  ... -.. 3  ... -.. 3  G$4 BJ. 3  A$4 B.H 2  C$3 U-4 3  A$4 B.. 3  D$3 U-4 3   # 0x22
+  D$4 B.K 2  D-2 U-4 3  D$4 B.. 3  G$4 BJ. 3  G$4 U-5 2  F$3 U-4 3  F$4 C.H 3  G$3 U-4 3  G$4 B.S 2  F$2 U-4 3  G$4 B.. 3  G$4 BJ. 3  A$4 B.S 2  D$3 U-4 3  A$4 B.. 3  F$3 U-4 3   # 0x23
+  A$4 B.K 2  D$2 U-4 3  A$4 B.. 3  F$4 BJ. 3  A$4 B.H 2  D$3 U-4 3  D$5 C.H 3  F$3 U-4 3  D$5 B.S 2  F$2 U-4 3  D$5 B.. 3  F$4 BJ. 3  F-5 B.S 2  F$3 U-4 3  F-5 C.. 3  G$3 U-4 3   # 0x24
+  F$5 B.K 2  B-1 U-4 3  F$5 B.. 3  G$4 BJ. 3  F-5 B.H 2  C$3 U-4 3  F-5 B.H 3  D$3 U-4 3  D$5 B.S 2  ... -.. 3  ... -.. 3  G$4 BJ. 3  C$5 B.H 2  C$3 U-4 3  C$5 B.. 3  D$3 U-4 3   # 0x25
+  A$4 B.K 2  B-1 U-4 3  A$4 B.. 3  G$4 BJ. 3  A$4 B.H 2  C$3 U-4 3  F-5 C.H 3  D$3 U-4 3  G$4 B.S 2  ... -.. 3  ... -.. 3  G$4 BJ. 3  A$4 B.H 2  C$3 U-4 3  A$4 C.. 3  D$3 U-4 3   # 0x26
+  G$4 B.K 2  C$2 U-4 3  G$4 B.. 3  G$4 BJ. 3  F$4 B.H 2  C$3 U-4 3  F$4 B.H 3  D$3 U-4 3  F-4 B.S 2  ... -.. 3  ... -.. 3  G$4 BJ. 3  C$4 B.H 2  C$3 U-4 3  C$4 B.. 3  D$3 U-4 3   # 0x27
+  D$4 B.S 3  D-2 U-4 3  G$4 BJ. 3  D$4 B.S 3  D$4 B.. 3  F$3 U-4 3  F$4 C.S 2  G$3 U-4 2  G$4 B.S 3  F$2 U-4 3  G$4 BJ. 3  G$4 B.S 3  A$4 B.. 3  D$3 U-4 3  A$4 B.S 2  F$3 U-4 2   # 0x28
+  C$5 B.K 3  D$2 U-4 3  C$5 B.. 3  E-4 BJ. 3  D$5 B.. 3  C$3 U-4 3  D$5 C.. 2  D$3 U-4 2  A$4 B.. 3  ... -.. 3  ... -.. 3  E-4 BJ. 3  G$4 B.. 3  C$3 U-4 3  G$4 B.. 2  D$3 U-4 2   # 0x29
+  A$4 B.H 3  D$2 U-4 3  A$4 B.. 3  E-4 BJ. 3  ... -.. 3  C$3 U-4 3  D$5 C.. 2  D$3 U-4 2  G$4 B.. 3  ... -.. 3  ... -.. 3  E-4 BJ. 3  A$4 B.. 3  C$3 U-4 3  A$4 C.. 2  D$3 U-4 2   # 0x2A
+  C$5 B.K 3  D$2 U-4 3  C$5 B.. 3  F$4 BJ. 3  D$5 B.. 3  C$3 U-4 3  D$5 C.. 2  D$3 U-4 2  A$4 B.. 3  ... -.. 3  ... -.. 3  F$4 BJ. 3  G$4 B.. 3  C$3 U-4 3  G$4 B.. 2  D$3 U-4 2   # 0x2B
+  A$4 B.H 3  D$2 U-4 3  A$4 B.. 3  F$4 BJ. 3  ... -.. 3  D$3 U-4 3  D$5 C.. 2  F$3 U-4 2  G$4 B.. 3  F$2 U-4 3  G$4 B.. 3  F$4 BJ. 3  A$4 B.. 3  F$3 U-4 3  A$4 C.. 2  G$3 U-4 2   # 0x2C
+  G$4 B.K 3  D$2 U-4 3  G$4 B.. 3  G$4 BJ. 3  F$4 B.. 3  C$3 U-4 3  F$4 B.. 2  D$3 U-4 2  F-4 B.. 3  ... -.. 3  ... -.. 3  G$4 BJ. 3  C$4 B.. 3  C$3 U-4 3  C$4 B.. 2  D$3 U-4 2   # 0x2D
+  D$4 B.H 3  D$2 U-4 3  D$4 B.. 3  G$4 BJ. 3  ... -.. 3  C$3 U-4 3  F$4 C.. 2  D$3 U-4 2  C$4 B.. 3  ... -.. 3  ... -.. 3  G$4 BJ. 3  D$4 B.. 3  C$3 U-4 3  D$4 C.. 2  D$3 U-4 2   # 0x2E
+  F-4 B.K 3  D$2 U-4 3  F-4 B.. 3  G$4 BJ. 3  F$4 B.. 3  C$3 U-4 3  F$4 B.. 2  D$3 U-4 2  G$4 B.. 3  ... -.. 3  ... -.. 3  G$4 BJ. 3  A$4 B.. 3  C$3 U-4 3  A$4 B.. 2  D$3 U-4 2   # 0x2F
+  D$4 B.H 3  D$2 U-4 3  D$4 B.. 3  G$4 BJ. 3  G$4 B.K 3  F$3 U-4 3  F$4 C.. 2  G$3 U-4 2  G$4 B.. 3  F$2 U-4 3  G$4 B.. 3  G$4 BJ. 3  A$4 B.K 3  D$3 U-4 3  A$4 B.. 2  F$3 U-4 2   # 0x30
+  A$4 B.H 3  D$2 U-4 3  A$4 B.. 3  F$4 BJ. 3  ... -.. 3  D$3 U-4 3  D$5 C.. 2  F$3 U-4 2  D$5 B.. 3  F$2 U-4 3  G$4 B.. 3  F$4 BJ. 3  F-5 B.. 3  F$3 U-4 3  D$5 C.. 2  G$3 U-4 2   # 0x31
+  F$5 B.K 2  B-1 U-4 3  F$5 B.. 3  G$4 BJ. 3  F-5 B.. 2  C$3 U-4 3  F-5 B.. 3  D$3 U-4 3  D$5 B.. 2  ... -.. 3  ... -.. 3  G$4 BJ. 3  C$5 B.. 2  C$3 U-4 3  C$5 B.. 3  D$3 U-4 3   # 0x32
+  A$4 B.H 2  B-1 U-4 3  A$4 B.. 3  G$4 BJ. 3  A$4 B.. 2  C$3 U-4 3  F-5 C.. 3  D$3 U-4 3  G$4 B.. 2  ... -.. 3  ... -.. 3  G$4 BJ. 3  A$4 B.. 2  C$3 U-4 3  A$4 C.. 3  D$3 U-4 3   # 0x33
+  G$4 B.K 2  C$2 U-4 3  G$4 B.. 3  G$4 BJ. 3  F$4 B.. 2  C$3 U-4 3  F$4 B.. 3  D$3 U-4 3  F-4 B.. 2  ... -.. 3  ... -.. 3  G$4 BJ. 3  C$4 B.. 2  C$3 U-4 3  C$4 B.. 3  D$3 U-4 3   # 0x34
+  D$4 B.S 2  D-2 U-4 3  G$4 BJ. 3  D$4 B.. 3  D$4 B.. 2  F$3 U-4 3  F$4 C.. 3  G$3 U-4 3  G$4 B.S 2  F$2 U-4 3  G$4 BJ. 3  G$4 B.. 3  A$4 B.S 2  D$3 U-4 3  A$4 B.S 3  F$3 U-4 3   # 0x35
+  F-4 B.H 3  F-2 U-4 3  F-4 B.. 3  A$4 BJ. 3  A$4 B.K 3  G$3 U-4 3  G$4 C.. 2  A$3 U-4 2  A$4 B.. 3  G$2 U-4 3  A$4 B.. 3  A$4 BJ. 3  C-5 B.. 3  F-3 U-4 3  C-5 B.. 2  G$3 U-4 2   # 0x36
+  C-5 B.H 3  F-2 U-4 3  C-5 B.. 3  G$4 BJ. 3  ... -.. 3  F-3 U-4 3  F-5 C.. 2  G$3 U-4 2  F-5 B.. 3  G$2 U-4 3  A$4 B.. 3  G$4 BJ. 3  G-5 B.. 3  G$3 U-4 3  F-5 C.. 2  A$3 U-4 2   # 0x37
+  G$5 B.K 2  C$2 U-4 3  G$5 B.. 3  A$4 BJ. 3  G-5 B.. 2  D$3 U-4 3  G-5 B.. 3  F-3 U-4 3  F-5 B.. 2  ... -.. 3  ... -.. 3  A$4 BJ. 3  D$5 B.. 2  D$3 U-4 3  D$5 B.. 3  F-3 U-4 3   # 0x38
+  C-5 B.H 2  C$2 U-4 3  C-5 B.. 3  A$4 BJ. 3  C-5 B.. 2  D$3 U-4 3  G-5 C.. 3  F-3 U-4 3  A$4 B.. 2  ... -.. 3  ... -.. 3  A$4 BJ. 3  C-5 B.. 2  D$3 U-4 3  C-5 C.. 3  F-3 U-4 3   # 0x39
+  A$4 B.K 2  D$2 U-4 3  A$4 B.. 3  A$4 BJ. 3  G$4 B.. 2  D$3 U-4 3  G$4 B.. 3  F-3 U-4 3  G-4 B.. 2  ... -.. 3  ... -.. 3  A$4 BJ. 3  D$4 B.. 2  D$3 U-4 3  D$4 B.. 3  F-3 U-4 3   # 0x3A
+  F-4 B.S 2  C$2 U-4 3  F-4 B.. 3  F$4 BJ. 3  F-4 C.. 2  C$3 U-4 3  G$4 C.. 3  D$3 U-4 3  F$4 B.S 2  ... -.. 3  ... -.. 3  F$4 BJ. 3  F$4 C.. 2  C$3 U-4 3  F-4 C.. 3  D$3 U-4 3   # 0x3B
+  G$4 B.S 2  D-2 U-4 3  G$4 A.. 3  G$4 U-4 3  G-4 BJ. 2  F$4 B.. 3  F$3 U-4 3  G$3 U-4 3  A$4 B.S 2  F$2 U-4 3  A$4 B.. 3  A$4 U-4 3  G-4 BJ. 2  D$3 U-4 3  G$4 B.. 3  F$3 U-4 3   # 0x3C
+  D$4 B.S 3  D-2 U-4 3  D$4 B.. 3  G$4 BJS 3  G$4 U-5 3  F$3 U-4 3  F$4 C.S 2  G$3 U-4 2  G$4 B.S 3  F$2 U-4 3  G$4 B.. 3  G$4 BJS 3  A$4 B.. 3  D$3 U-4 3  A$4 B.S 2  F$3 U-4 2   # 0x3D
+  D$4 B.S 3  D-2 U-4 3  G$4 BJ. 3  D$4 B.S 3  D$4 B.. 3  F$3 U-4 3  F$4 C.S 2  G$3 U-4 2  A$4 B.S 3  F$2 U-4 3  G$4 BJ. 3  G$4 B.S 3  C-5 B.. 3  D$3 U-4 3  A$4 B.S 2  F$3 U-4 2   # 0x3E
+  D$5 B.K 3  F-2 U-4 3  D$5 B.. 3  F$4 BJ. 3  F-5 B.. 3  D$3 U-4 3  F-5 C.. 2  F-3 U-4 2  C-5 B.. 3  ... -.. 3  ... -.. 3  F$4 BJ. 3  A$4 B.. 3  D$3 U-4 3  A$4 B.. 2  F-3 U-4 2   # 0x3F
+  C-5 B.H 3  F-2 U-4 3  C-5 B.. 3  F$4 BJ. 3  ... -.. 3  D$3 U-4 3  F-5 C.. 2  F-3 U-4 2  A$4 B.. 3  ... -.. 3  ... -.. 3  F$4 BJ. 3  C-5 B.. 3  D$3 U-4 3  C-5 C.. 2  F-3 U-4 2   # 0x40
+  D$5 B.K 3  F-2 U-4 3  D$5 B.. 3  G$4 BJ. 3  F-5 B.. 3  D$3 U-4 3  F-5 C.. 2  F-3 U-4 2  C-5 B.. 3  ... -.. 3  ... -.. 3  G$4 BJ. 3  A$4 B.. 3  D$3 U-4 3  A$4 B.. 2  F-3 U-4 2   # 0x40
+  C-5 B.H 3  F-2 U-4 3  C-5 B.. 3  G$4 BJ. 3  ... -.. 3  F-3 U-4 3  F-5 C.. 2  G$3 U-4 2  A$4 B.. 3  G$2 U-4 3  A$4 B.. 3  G$4 BJ. 3  C-5 B.. 3  G$3 U-4 3  C-5 C.. 2  A$3 U-4 2   # 0x41
+  A$4 B.K 3  F-2 U-4 3  A$4 B.. 3  A$4 BJ. 3  G$4 B.. 3  D$3 U-4 3  G$4 B.. 2  F-3 U-4 2  G-4 B.. 3  ... -.. 3  ... -.. 3  A$4 BJ. 3  D$4 B.. 3  D$3 U-4 3  D$4 B.. 2  F-3 U-4 2   # 0x42
+  F-4 B.H 3  F-2 U-4 3  F-4 B.. 3  A$4 BJ. 3  ... -.. 3  D$3 U-4 3  G$4 C.. 2  F-3 U-4 2  D$4 B.. 3  ... -.. 3  ... -.. 3  A$4 BJ. 3  F-4 B.. 3  D$3 U-4 3  F-4 C.. 2  F-3 U-4 2   # 0x43
+  G-4 B.K 3  F-2 U-4 3  G-4 B.. 3  A$4 BJ. 3  G$4 B.. 3  D$3 U-4 3  G$4 B.. 2  F-3 U-4 2  A$4 B.. 3  ... -.. 3  ... -.. 3  A$4 BJ. 3  C-5 B.. 3  D$3 U-4 3  C-5 B.. 2  F-3 U-4 2   # 0x44
+  F-4 B.H 3  F-2 U-4 3  F-4 B.. 3  A$4 BJ. 3  A$4 B.K 3  G$3 U-4 3  G$4 C.. 2  A$3 U-4 2  A$4 B.. 3  G$2 U-4 3  A$4 B.. 3  A$4 BJ. 3  C-5 B.K 3  F-3 U-4 3  C-5 B.. 2  G$3 U-4 2   # 0x45
+  F-4 B.H 2  E-2 U-4 3  A$4 BJ. 3  F-4 B.. 3  F-4 B.. 2  G$3 U-4 3  G$4 C.. 3  A$3 U-4 3  F-4 B.. 2  G$2 U-4 3  F-4 BJ. 3  F-4 B.. 3  F-4 B.S 2  F-3 U-4 3  F-4 B.. 3  G$3 U-4 3   # 0x46
+  A$3 BJ. 2  ... -.. 3  ... -.. 3  ... -.. 3  ... -.. 2  ... -.. 3  ... -.. 3  ... -.. 3  ... -.. 2  ... -.. 3  ... -.. 3  ... -.. 3  ... -.. 2  ... -.. 3  ... -.. 3  ... -.. 3   # 0x47
+  A$3 -.. 2  ... -.. 3  ... -.. 3  ... -.. 3  ... -.. 2  ... -.. 3  ... -.. 3  ... -.. 3  ... -.. 2  ... -.. 3  ... -.. 3  ... -.. 3  ... -.. 2  ... -.. 3  ... -.. 3  ... -.. 3   # 0x48
+
+
+
+: huffman-codebook
+  0x0f 0x01 0x00 0x00 0x01 0x07 0x04 0x08 0x08 0x07 0x12 0x1a 0x2f 0x1f 0x19 0x31
+  0x00 0x01 0x02 0x04 0x08 0x10 0x20 0x40 0x80 0x03 0x07 0xc0 0xff 0x06 0x0c 0x0f
+  0x18 0x30 0x60 0xe0 0xf0 0x0e 0x1c 0x1f 0x38 0x3f 0x70 0xf8 0xfc 0x1e 0x3c 0x3e
+  0x78 0x7c 0x7f 0xfe 0x05 0x09 0x0a 0x11 0x14 0x21 0x28 0x41 0x50 0x7e 0x81 0x82
+  0x83 0x84 0x88 0x90 0xa0 0xc1 0x0b 0x0d 0x12 0x13 0x19 0x22 0x24 0x31 0x33 0x42
+  0x44 0x48 0x61 0x86 0x87 0x8c 0x8f 0x98 0xb0 0xc3 0xc7 0xd0 0xdf 0xe1 0xe3 0xf7
+  0x16 0x1a 0x1b 0x1d 0x23 0x26 0x27 0x32 0x34 0x36 0x37 0x39 0x3b 0x43 0x46 0x4c
+  0x62 0x63 0x64 0x66 0x68 0x6c 0x71 0x73 0x79 0x8e 0x9c 0x9f 0xb8 0xbf 0xc2 0xc4
+  0xc6 0xc8 0xcc 0xce 0xcf 0xd8 0xdc 0xe2 0xe7 0xef 0xf1 0xf3 0xf9 0xfb 0xfd 0x17
+  0x2c 0x2e 0x2f 0x3a 0x3d 0x47 0x4f 0x58 0x5c 0x67 0x6e 0x6f 0x74 0x76 0x77 0x7b
+  0x7d 0x9e 0xbc 0xbe 0xde 0xe4 0xe6 0xe8 0xec 0xee 0xf2 0xf4 0xf6 0xfa 0x15 0x29
+  0x2a 0x45 0x49 0x4a 0x4e 0x51 0x54 0x5e 0x5f 0x6d 0x72 0x85 0x91 0x92 0x94 0xa1
+  0xa2 0xa4 0xa8 0xb1 0xc5 0xcb 0xdd 0x25 0x2b 0x2d 0x4b 0x4d 0x52 0x53 0x55 0x59
+  0x5b 0x65 0x69 0x6a 0x75 0x7a 0x89 0x8a 0x8b 0x8d 0x93 0x96 0x97 0x99 0x9a 0x9b
+  0x9d 0xa3 0xa6 0xa7 0xac 0xb3 0xb4 0xb6 0xb7 0xb9 0xbb 0xbd 0xc9 0xca 0xcd 0xd1
+  0xd3 0xd4 0xd9 0xda 0xdb 0xe9 0xeb 0xf5
+
 
 : bad_apple_000 # ["bbox","RLE"]
   0x50 0x25 0x9a 0x97 0x03 0x00 0x00 0x00 0x02 0xa9 0x19 0x80 0x02 0xb2 0xa2 0x00
@@ -13699,3 +14675,5 @@
 
 : bad_apple_6508 # ["bbox"]
   0x16 0x1a 0xdf 0xdf 0x00
+
+: the-end  # So we know when we're out of frames
