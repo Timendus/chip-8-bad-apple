@@ -1,7 +1,7 @@
 const { byteDifference } = require('./helpers.js');
 
 const cutOff = 2;   // Candidate bytes are bytes where only `cutOff` or fewer pixels are set
-const remove = 0.32; // Remove a fraction of those candidate bytes randomly
+const remove = 0.33; // Remove a fraction of those candidate bytes randomly
 
 // Given a diff image, throw out some of the difference to make it encode better
 module.exports = {
