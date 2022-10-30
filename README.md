@@ -534,7 +534,7 @@ in the grand scheme of things this didn't improve much.
 Talking about comparing different methods, here's a graph comparing all the
 different ways in which I'm encoding the video at this point:
 
-![Comparison of different compression methods](./pictures/compression-methods.png)
+![Comparison of different compression methods](./pictures/graph3.png)
 
 My script encodes each frame using every method, and them selects the smallest
 from the bunch. `chosen` is the sum total of the selected encodings. `skip` is
@@ -546,4 +546,37 @@ how this new method wasn't being used much and saved only 79 bytes (most of
 which would be lost again by including the decompression routine), I didn't keep
 it in.
 
+### Scrolling
+
+While we're looking at graphs, let's see which encoding methods actually get
+chosen by the algorithm:
+
+![Chosen compression methods](./pictures/graph4.png)
+
+It was pretty obvious that Huffman encoding was winning the competition more
+than 95% of the time, and it seemed to me that only methods that worked in
+combination with Huffman encoding had any realistic chance of bringing the total
+video size down.
+
+So next up I borrowed an idea from the video codec world. Often the difference
+between two frames of video is just shifting the image a couple of pixels.
+Imaging a panning shot where the camera just moves to the right or to the left:
+we basically just need to shift the image, add a new column or two and update a
+pixel here and there. Smart real-world codecs make a lot of use of this.
+
+We have SUPER-CHIP and XO-CHIP scrolling instructions at our disposal on the
+decoding side of things, so this seemed to me like a match made in heaven.
+
+After writing the scrolling logic into the encoder, I saw that it would indeed
+save us around 4000 bytes, which is pretty nice.
+
+But when I started work on the decoder and testing the results, I realised that
+the scroll instructions apply to the whole display, while I wasn't using the two
+outermost bytes of the display for the video. CHIP-8 doesn't have a way of
+clearing those bytes after scrolling some garbage into them. So we would have to
+accept that there's just constantly garbage on the display to the right and to
+the left of the video.
+
+That doesn't really make the perfectionist in me happy. So this idea too got
+scratched, leaving a potential 4000 byte improvement on the table.
 
