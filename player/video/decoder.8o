@@ -37,6 +37,38 @@
     v2 += 1         # Update number of bytes consumed so far
   end
 
+#if SCROLLING
+  # Do we have to scroll the current display?
+  v1 := 1
+  v1 &= v0
+  if v1 != 0 begin
+    load v1 - v1
+    vF := 1
+    i += vF
+    v2 += 1         # Update number of bytes consumed so far
+
+    # Decode direction
+    v3 := 1
+    v3 &= v1
+    if v3 != 0 then scroll-left
+    v3 := 2
+    v3 &= v1
+    if v3 != 0 then scroll-right
+    v3 := 4
+    v3 &= v1
+    if v3 != 0 then scroll-up 4
+    v3 := 8
+    v3 &= v1
+    if v3 != 0 then scroll-up 2
+    v3 := 16
+    v3 &= v1
+    if v3 != 0 then scroll-down 4
+    v3 := 32
+    v3 &= v1
+    if v3 != 0 then scroll-down 2
+  end
+#end
+
   # Register number of bytes consumed so far
   vF := v2
   update-frame-pointer

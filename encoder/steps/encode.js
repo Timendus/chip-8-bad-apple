@@ -3,7 +3,8 @@ const {
   rle,
   huffmanEncoder,
   interlacing,
-  singleBytes
+  singleBytes,
+  scroll
 } = require('../lib');
 
 const {
@@ -13,6 +14,15 @@ const {
   assertAndWarn,
   arrayDifference
 } = require('../lib/helpers.js');
+
+const scrollDirections = {
+  'scroll-left':   1 << 0,
+  'scroll-right':  1 << 1,
+  'scroll-up-4':   1 << 2,
+  'scroll-up-2':   1 << 3,
+  'scroll-down-4': 1 << 4,
+  'scroll-down-2': 1 << 5
+};
 
 module.exports = function(movie, options) {
   // Set default options
@@ -33,6 +43,7 @@ module.exports = function(movie, options) {
   let display = new Array(options.width * options.height / 8).fill(0);
   let previousFrame = false;
   let runningTotal = 0;
+  let savedDisplay = [];
   for ( const frame of movie ) {
     if ( !frame[options.input] ) continue;
     assert(frame[options.input].every(v => typeof v == 'number'), `Expecting the input image to hold only numeric values for frame ${frame.id}`);
@@ -51,6 +62,10 @@ module.exports = function(movie, options) {
       // Huffman/RLE encoding?
       const headerSize = chain.includes('bbox') ? 2 : 0;
       const interlaced = chain.includes('interlacing');
+      const scrolling = Object.keys(scrollDirections).reduce(
+        (a, m) => a | (chain.includes(m) ? scrollDirections[m] : 0),
+        0
+      );
 
       // Skip interlaced chains for the first frame, otherwise the message gets
       // garbled and unreadable
@@ -73,6 +88,8 @@ module.exports = function(movie, options) {
       assert(decoded.length == frame[options.input].length, `${chainString}: Output size (${decoded.length}) should equal input size (${frame[options.input].length} bytes) for frame ${frame.id}`);
       assert(pixelsDifference <= allowedDifference, `${chainString}: Decoded should match input for frame ${frame.id}. Found ${pixelsDifference} pixels that don't match, where ${allowedDifference} pixels are allowed.\n\nGot decoded:\n${render(decoded, options.width)}\n${JSON.stringify(decoded)}\n\nExpected input:\n${render(frame[options.input], options.width)}\n${JSON.stringify(frame[options.input])}\n`);
       // assertAndWarn(pixelsDifference == 0, `Warning: Difference of ${pixelsDifference} between input and decoded for frame ${frame.id}`);
+
+      if ( scrolling != 0 ) encoded = [scrolling, ...encoded];
       encodings[chainString] = { encoded, decoded };
       frame[chainString] = encoded;
     }
@@ -92,6 +109,12 @@ module.exports = function(movie, options) {
 
   function encode(method, data, headerSize, interlaced) {
     switch(method) {
+      case 'scroll-left':   savedDisplay.push(display); display = scroll(display, options.width, interlaced, oddRow, 'left');    return data;
+      case 'scroll-right':  savedDisplay.push(display); display = scroll(display, options.width, interlaced, oddRow, 'right');   return data;
+      case 'scroll-up-4':   savedDisplay.push(display); display = scroll(display, options.width, interlaced, oddRow, 'up');      return data;
+      case 'scroll-up-2':   savedDisplay.push(display); display = scroll(display, options.width, interlaced, oddRow, 'up', 2);   return data;
+      case 'scroll-down-4': savedDisplay.push(display); display = scroll(display, options.width, interlaced, oddRow, 'down');    return data;
+      case 'scroll-down-2': savedDisplay.push(display); display = scroll(display, options.width, interlaced, oddRow, 'down', 2); return data;
       case 'interlacing':   return interlacing.encode(data, options.width, oddRow);
       case 'diff':          return data.map((byte, i) => byte ^ display[i]);
       case 'bbox':          return boundingBox.encode(data, options.width, interlaced);
@@ -105,6 +128,12 @@ module.exports = function(movie, options) {
   function decode(method, data, headerSize, interlaced) {
     const dataLength = options.width * options.height / 8;
     switch(method) {
+      case 'scroll-left':   display = savedDisplay.pop(); return data;
+      case 'scroll-right':  display = savedDisplay.pop(); return data;
+      case 'scroll-up-4':   display = savedDisplay.pop(); return data;
+      case 'scroll-up-2':   display = savedDisplay.pop(); return data;
+      case 'scroll-down-4': display = savedDisplay.pop(); return data;
+      case 'scroll-down-2': display = savedDisplay.pop(); return data;
       case 'interlacing':   return interlacing.decode(data, options.width, oddRow, new Array(dataLength).fill(0));
       case 'diff':          return data.map((byte, i) => byte ^ display[i]);
       case 'bbox':          return boundingBox.decode(new Array(dataLength).fill(0), data, options.width, interlaced);
@@ -136,6 +165,12 @@ module.exports = function(movie, options) {
 
   function findAllowedDifference(method) {
     const lossyness = {
+      'scroll-left':   0,
+      'scroll-right':  0,
+      'scroll-up-2':   0,
+      'scroll-down-2': 0,
+      'scroll-up-4':   0,
+      'scroll-down-4': 0,
       'interlacing':   options.width * options.height / 2,
       'diff':          0,
       'bbox':          0,
