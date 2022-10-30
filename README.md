@@ -580,3 +580,40 @@ the left of the video.
 That doesn't really make the perfectionist in me happy. So this idea too got
 scratched, leaving a potential 4000 byte improvement on the table.
 
+### Getting kinda desperate
+
+To be perfectly honest with you, I never expected this project to be quite as
+hard as it turned out to be. When I started it I expected to work on this for
+roughly the first week of the jam, and then move on to an actual game.
+
+At this point I had been spending much of my spare time (which, admittedly, is
+not all THAT much 😉) on this project for the whole month, and even though I
+"only" needed to get rid of the last 30.000 bytes or so (almost nothing,
+compared to when I started!) I didn't seem to make much progress anymore. To
+make matters worse, I only had a day or two left to wrap this thing up before
+the Octojam deadline, and I really didn't feel like releasing an incomplete
+video!
+
+So once again, it was time for drastic measures 😈
+
+First, I reduced the frame rate from 15 FPS to an awful 10 FPS. This resulted in
+a total size that was just 9867 bytes too large(!)
+
+Smelling the finish line, I tried reducing the number of bits that the Huffman
+codebook is allowed to use. I could previously shave off 1000 - 2000 bytes with
+this trick, but now that the overall size is reduced a lot, this only had an
+impact of a couple hundred bytes.
+
+So finally, sort of as a hack, I added an additional encoding step that just
+randomly throws away small changes in the diff. Because each frame tries very
+hard to reduce the leftover noise that the previous frame didn't clean up, these
+random mess-ups get removed over time and basically just introduce semi-random
+decoding noise. But noise that's a hell of a lot easier to compress!
+
+This finally brought the total size of the video down to something we can store!
+🎉
+
+I played with the parameters to the random diff reduction step and the Huffman
+codebook bits until I felt like I found the least bad trade-off. Time to submit
+v1.0 of this thing! We can always release an improved version later!
+
