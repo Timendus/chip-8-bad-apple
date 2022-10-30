@@ -13,7 +13,7 @@ const {
 const huffmanEncoder = require('./lib/huffman-encoder.js');
 const { render } = require('./lib/helpers.js');
 
-const MAX_SIZE = 59883;
+const MAX_SIZE = 59881;
 const movie = [];
 
 const methods = [
