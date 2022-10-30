@@ -527,16 +527,23 @@ I encoded each byte that needed to change in two bytes: one for the coordinate
 of the mutation (again, three most significant bits for X, least significant
 five bits for Y) and another one for the value.
 
-The result wasn't bad actually, but the Huffman encoding was equally good, so
-this new method was only chosen for less than 3% of the frames. So in the grand
-scheme of things this didn't improve much.
+The result wasn't bad actually, but the other encodings were either equally good
+or better, so this new method was only chosen for less than 3% of the frames. So
+in the grand scheme of things this didn't improve much.
 
-Talking about comparing different methods, here's a nice graph:
+Talking about comparing different methods, here's a graph comparing all the
+different ways in which I'm encoding the video at this point:
 
 ![Comparison of different compression methods](./pictures/compression-methods.png)
 
-As you can see, Huffman is kicking "single byte"'s ass. The comparison is not
-100% fair though, because when we use Huffman we also need to store a
-"translation table" for all the values. This additional data, which is a couple
-hundred bytes, is not taken into account for this graph because it is shared
-between all chains that include Huffman.
+My script encodes each frame using every method, and them selects the smallest
+from the bunch. `chosen` is the sum total of the selected encodings. `skip` is
+when a frame can be skipped because nothing changes relative to the previous
+frame, which is (nearly) "free" for those frames it applies to.
+
+As you can see, `globalHuffman` is kinda just kicking `singleByte`'s ass. Seeing
+how this new method wasn't being used much and saved only 79 bytes (most of
+which would be lost again by including the decompression routine), I didn't keep
+it in.
+
+
