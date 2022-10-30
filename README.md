@@ -584,15 +584,14 @@ scratched, leaving a potential 4000 byte improvement on the table.
 
 To be perfectly honest with you, I never expected this project to be quite as
 hard as it turned out to be. When I started it I expected to work on this for
-roughly the first week of the jam, and then move on to an actual game.
+roughly the first week of the jam, and then move on to an actual game 🙈
 
 At this point I had been spending much of my spare time (which, admittedly, is
-not all THAT much 😉) on this project for the whole month, and even though I
-"only" needed to get rid of the last 30.000 bytes or so (almost nothing,
-compared to when I started!) I didn't seem to make much progress anymore. To
-make matters worse, I only had a day or two left to wrap this thing up before
-the Octojam deadline, and I really didn't feel like releasing an incomplete
-video!
+not all THAT much 😉) on this project for a whole month. Even though I "only"
+needed to get rid of the last 30.000 bytes or so (almost nothing, compared to
+when I started!) I didn't seem to make much progress anymore. To make matters
+worse, I only had a day or two left to wrap this thing up before the Octojam
+deadline, and I really didn't feel like releasing an incomplete video!
 
 So once again, it was time for drastic measures 😈
 
@@ -602,7 +601,7 @@ a total size that was just 9867 bytes too large(!)
 Smelling the finish line, I tried reducing the number of bits that the Huffman
 codebook is allowed to use. I could previously shave off 1000 - 2000 bytes with
 this trick, but now that the overall size is reduced a lot, this only had an
-impact of a couple hundred bytes.
+impact of a couple hundred bytes. So no dice there.
 
 So finally, sort of as a hack, I added an additional encoding step that just
 randomly throws away small changes in the diff. Because each frame tries very
@@ -610,10 +609,37 @@ hard to reduce the leftover noise that the previous frame didn't clean up, these
 random mess-ups get removed over time and basically just introduce semi-random
 decoding noise. But noise that's a hell of a lot easier to compress!
 
-This finally brought the total size of the video down to something we can store!
-🎉
+As you can see in this graph, the `reduce-diff` method (combined with Huffman
+and interlacing) is now chosen for pretty much all frames:
 
-I played with the parameters to the random diff reduction step and the Huffman
-codebook bits until I felt like I found the least bad trade-off. Time to submit
-v1.0 of this thing! We can always release an improved version later!
+![Distribution of chosen encoding methods](./pictures/graph6.png)
 
+This step finally brought the total size of the video down to something we can
+store! 🎉
+
+![Showing the impact of reducing the framerate and allowing diff noise](./pictures/graph5.png)
+
+Note that we also need some space to store the Huffman codebook and that each
+frame gets a "header" that tells the decoder how the frame is encoded. That's
+why the chosen total needs to be a bit more comfortably under the "available
+memory" line at 59.883 bytes than you may expect.
+
+I played with the parameters to the `reduce-diff` step some more until I found
+the trade-off that fits in memory best, and called it a jam!
+
+Time to submit v1.0 of this thing!
+
+### Conclusion
+
+I'm not a video codec guy. I'm just someone playing with bits and algorithms and
+messing around until he gets what he wants. More or less.
+
+So I'm pretty sure that someone else will be able to do a much better job at
+this than I have done here. I feel like it must be possible to at least get back
+to 15 FPS or get rid of the ugly interlacing with some patience and algorithms
+that are better suited to video. I really doubt if encoding this video at
+`hires` and 30 FPS will ever be possible. If anyone manages to pull it off: let
+me know 😄
+
+But this has been a fun project and I have learned a lot! Thanks for reading
+along and good luck with your own projects! 👋
