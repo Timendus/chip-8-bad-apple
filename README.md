@@ -561,7 +561,7 @@ video size down.
 
 So next up I borrowed an idea from the video codec world. Often the difference
 between two frames of video is just shifting the image a couple of pixels.
-Imaging a panning shot where the camera just moves to the right or to the left:
+Imagine a panning shot where the camera just moves to the right or to the left:
 we basically just need to shift the image, add a new column or two and update a
 pixel here and there. Smart real-world codecs make a lot of use of this.
 
@@ -572,11 +572,11 @@ After writing the scrolling logic into the encoder, I saw that it would indeed
 save us around 4000 bytes, which is pretty nice.
 
 But when I started work on the decoder and testing the results, I realised that
-the scroll instructions apply to the whole display, while I wasn't using the two
+the scroll instructions apply to the whole display. But I wasn't using the two
 outermost bytes of the display for the video. CHIP-8 doesn't have a way of
-clearing those bytes after scrolling some garbage into them. So we would have to
-accept that there's just constantly garbage on the display to the right and to
-the left of the video.
+clearing those bytes after horizontally scrolling some garbage into them. So we
+would have to accept that there's just constantly garbage on the display to the
+right and to the left of the video.
 
 That doesn't really make the perfectionist in me happy. So this idea too got
 scratched, leaving a potential 4000 byte improvement on the table.
