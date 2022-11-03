@@ -628,19 +628,75 @@ memory" line at 59.883 bytes than you may expect.
 I played with the parameters to the `reduce-diff` step some more until I found
 the trade-off that fits in memory best, and called it a jam!
 
-Time to submit v1.0 of this thing!
+![A part of the first released version of the program](./pictures/version1-0.gif)
+
+Time to submit version 1.0 of this thing!
+
+### Reducing the noise
+
+One day after I submitted our version of Bad Apple, Koorogi also submitted [an
+excellent rendition of Bad Apple](https://koorogi.itch.io/bad-apple) to Octojam
+9, which surprised us as much as we had surprised him 😄. His version wasn't
+quite as noisy as ours, but by the looks of it he seemed to trade in some
+resolution and some framerate. I haven't seen his code yet, but it looks like he
+approached the challenge quite differently, resulting is a very clean, but also
+slightly more blocky and stuttery video.
+
+But because we now had competition, I suddenly had a lot more difficulty with
+letting the project go. Our end result wasn't bad, but it was pretty rushed in
+the end and the combination of interlacing and the diff reduction made it really
+noisy and messy.
+
+After sleeping on it for a day or two, I started playing with a few other ideas,
+mainly in an attempt to get rid of the interlacing. I figured that maybe just
+using all of our frames for only the odd lines would give the same total size,
+but look better, even if we would trade in some vertical resolution:
+
+![Only encoding and rendering odd lines](./pictures/odd-lines.gif)
+
+This actually didn't look too bad, and to my surprise it had another huge
+benefit: because the diff between successive frames is smaller (we're not
+effectively skipping a frame every update anymore) this compressed a lot better
+too!
+
+However, I felt like it looked a bit too much like I was cheating, by so
+obviously reducing the vertical resolution. So I tried to see what would happen
+if we just doubled all the lines:
+
+![Doubling all the lines](./pictures/double-lines.gif)
+
+This works fine and it doesn't look too bad, but at the same time it does look
+like everything is a bit stretched. Something is clearly a bit off.
+
+When driving home from work the next day, I realised that what what I really
+needed was a way to interpolate the missing lines between the lines above and
+below them. Just copying the line above wastes the information that we have in
+the line below. So I set out to write an algorithm (that I called "smoothing")
+to find that interpolation between the two lines, as a way to fill in the
+missing lines.
+
+![The smoothed result](./pictures/smoothed.gif)
+
+The result was a huge improvement. Sure, there are a few places where you're
+clearly missing information entirely (like in the broomstick). In those places
+we can't fully interpolate back to a proper image. But in most frames, this
+approach was actually a significant improvement over both previous versions --
+and more importantly: over the noisy version 1.0!
+
+So it was time to release a version 1.1 🎉
+
+And this version actually has over 4000 bytes **free space**! Wut 😂
 
 ### Conclusion
 
-I'm not a video codec guy. I'm just someone playing with bits and algorithms and
+I'm not a video codec guy. I'm just a dude playing with bits and algorithms and
 messing around until he gets what he wants. More or less.
 
 So I'm pretty sure that someone else will be able to do a much better job at
 this than I have done here. I feel like it must be possible to at least get back
-to 15 FPS or get rid of the ugly interlacing with some patience and algorithms
-that are better suited to video. I really doubt if encoding this video at
-`hires` and 30 FPS will ever be possible. If anyone manages to pull it off: let
-me know 😄
+to 15 FPS with some patience and algorithms that are better suited to video. I
+really doubt if encoding this video at `hires` and 30 FPS will ever be possible.
+If anyone manages to pull it off: let me know 😄
 
 But this has been a fun project and I have learned a lot! Thanks for reading
 along and good luck with your own projects! 👋
