@@ -15,7 +15,7 @@ music and all. It's a collaboration between
      (Low resolution, low quality, but longest runtime)
    * [High quality version](https://timendus.github.io/chip-8-bad-apple/high-quality.html)
      (High resolution, high quality, but only a tiny part of it)
- * [Watch the boring video version on YouTube](https://youtu.be/Fp9WJB9bxQo) (of the long runtime version)
+ * [Watch the boring video version on YouTube](https://youtu.be/Fp9WJB9bxQo) (long runtime, version 1.0 -- video of version 1.1 coming soon)
 
 ## The concept
 
