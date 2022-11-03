@@ -36,7 +36,8 @@ module.exports = function(movie, options) {
     width: 48,
     height: 32,
     render: false,
-    maxSize: Infinity
+    maxSize: Infinity,
+    forceInterlaced: false
   }, options);
 
   // Apply all chains of encoders (and decoders) to all frames, sequentially
@@ -62,7 +63,7 @@ module.exports = function(movie, options) {
       // Do we have to keep the first two bytes of data untouched when doing
       // Huffman/RLE encoding?
       const headerSize = chain.includes('bbox') ? 2 : 0;
-      const interlaced = chain.includes('interlacing');
+        let interlaced = chain.includes('interlacing');
       const reduced    = chain.includes('reduce-diff');
       const scrolling  = Object.keys(scrollDirections).reduce(
         (a, m) => a | (chain.includes(m) ? scrollDirections[m] : 0),
@@ -72,6 +73,8 @@ module.exports = function(movie, options) {
       // Skip interlaced and reduced diff chains for the first frame, otherwise
       // the message gets garbled and unreadable
       if ( frame.id == '000' && (interlaced || reduced) ) continue;
+
+      interlaced ||= options.forceInterlaced;
 
       let encoded = frame[options.input];
       for ( const method of chain )

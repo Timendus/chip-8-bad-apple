@@ -16,6 +16,15 @@
 #end
 :calc HORIZ_END { HORIZ_MARGIN + OUTPUT_WIDTH }
 
+:macro draw-byte {
+  sprite X Y 1
+  #if SMOOTHING
+    Y += 1
+    sprite X Y 1
+    Y -= 1
+  #end
+}
+
 # Decode the next frame, pointed to by i
 # Don't mess up vB - vE, make sure we update frame pointer
 : decode
@@ -152,7 +161,7 @@
 # Don't mess up vB - vE, make sure we update frame pointer
 : plain-copy
   loop
-    sprite X Y 1
+    draw-byte
     vF := 1
     i += vF
     vF := 1
@@ -160,7 +169,11 @@
     next-coordinate
     if Y < height then
   again
-  return
+  #if SMOOTHING
+    jump smoothing
+  #else
+    return
+  #end
 
 # Do the RLE decoding
 # i points to the first run length
@@ -182,7 +195,7 @@
     if v1 == 0 begin
       # This is a repeating run, sprite i to the screen v0 times
       loop
-        sprite X Y 1
+        draw-byte
         next-coordinate
         v0 -= 1
         if v0 != 0 then
@@ -196,7 +209,7 @@
       vF := v0
       update-frame-pointer
       loop
-        sprite X Y 1
+        draw-byte
         vF := 1
         i += vF
         next-coordinate
@@ -207,7 +220,11 @@
 
     if Y < height then
   again
-  return
+  #if SMOOTHING
+    jump smoothing
+  #else
+    return
+  #end
 
 #if SINGLEBYTE
 : singleByte-decode
@@ -289,5 +306,77 @@
   X := startX
   Y += stride
   return
+
+#if SMOOTHING
+:macro smoothing-sample-pixel {
+  sprite X Y 1
+  sprite X Y 1
+}
+
+: smoothing
+  Y := 1
+  i := smoothing-pixel
+  loop
+    X := 1
+    loop
+      # Read the current pixel value
+      smoothing-sample-pixel
+      v0 := vF
+      # Read the pixels above it
+      Y -= 1
+      smoothing-sample-pixel
+      if v0 != vF begin
+        # Found a decoding artefact, should be the same. Fix the issue:
+        Y += 1
+        sprite X Y 1
+        Y -= 1
+        vF := 1
+        v0 ^= vF
+      end
+      # Check if the pixel to the top left and the top right are different
+      # from the current pixel
+      X -= 1
+      smoothing-sample-pixel
+      X += 1
+      if v0 == vF begin
+        X += 1
+        smoothing-sample-pixel
+        X -= 1
+        if v0 == vF begin
+          Y += 1
+          jump smoothing-resume
+        end
+      end
+      # There's a difference to the top left or top right, so check below
+      Y += 2
+      smoothing-sample-pixel
+      if v0 != vF begin
+        # If different, check if both the pixel below and to the left and
+        # below and to the right are also different
+        X -= 1
+        smoothing-sample-pixel
+        X += 1
+        if v0 != vF begin
+          X += 1
+          smoothing-sample-pixel
+          X -= 1
+          Y -= 1
+          if v0 != vF then sprite X Y 1
+          jump smoothing-resume
+        end
+      end
+      Y -= 1
+: smoothing-resume
+      X += 1
+      if X != 62 then
+    again
+    Y += 2
+    if Y != 31 then
+  again
+  return
+
+: smoothing-pixel
+  0b10000000
+#end
 
 #include "huffman.8o"

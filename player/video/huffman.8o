@@ -114,7 +114,7 @@
     i := long huffman-codebook
     i += bitsLength
     i += index
-    sprite X Y 1
+    draw-byte
 
     # Update screen location and check if we're done
     next-coordinate
@@ -123,7 +123,11 @@
 
   vF := 1
   update-frame-pointer
-  return
+  #if SMOOTHING
+    jump smoothing
+  #else
+    return
+  #end
 
 #if HUFFMAN_PRECOMPUTE
 # Compute the first 128 entries in the Huffman codebook and save them to the

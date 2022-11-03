@@ -4,8 +4,9 @@
     "scale-lores": "magick mogrify -path ./frames/lores/ -resize 48x32^ -gravity center -extent 48x32 -threshold 50% -quality 100 ./frames/original/*.png",
     "scale-hires": "magick mogrify -path ./frames/hires/ -resize 96x64^ -gravity center -extent 96x64 -monochrome -quality 100 ./frames/original/*.png",
     "encode-lores": "./encoder/smallest-size.js",
+    "encode-lores-revisited": "./encoder/smallest-size-revisited.js",
     "encode-hires": "./encoder/highest-quality.js",
-    "build": "octopus player/index.8o bin/bad-apple-high-quality.8o HIRES && octopus player/index.8o bin/bad-apple-long-runtime.8o LORES && cat bin/bad-apple-long-runtime.8o | pbcopy",
+    "build": "octopus player/index.8o bin/bad-apple-high-quality.8o HIRES && octopus player/index.8o bin/bad-apple-long-runtime.8o LORES SMOOTHING && cat bin/bad-apple-long-runtime.8o | pbcopy",
     "build-all": "npm run build && npm run build-binaries && npm run build-html",
     "build-binaries": "npm run build && octo bin/bad-apple-long-runtime.8o bin/bad-apple-long-runtime.ch8 && octo bin/bad-apple-high-quality.8o bin/bad-apple-high-quality.ch8",
     "build-html": "mkdir -p dist && octo --options octo-config-lores.json bin/bad-apple-long-runtime.8o dist/long-runtime.html && octo --options octo-config-hires.json bin/bad-apple-high-quality.8o dist/high-quality.html"

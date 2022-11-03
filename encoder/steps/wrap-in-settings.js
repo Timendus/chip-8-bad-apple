@@ -2,7 +2,8 @@ module.exports = function(movie, options) {
   // Set default options
   options = Object.assign({
     input: 'encoded',
-    output: 'encoded'
+    output: 'encoded',
+    forceInterlaced: false
   }, options);
 
   // How do we encode the chosen compression chain in the settings byte?
@@ -31,7 +32,10 @@ module.exports = function(movie, options) {
     if ( !frame[options.input] ) continue;
 
     let settings = JSON.parse(frame.method).reduce((acc, method) => acc + encodings[method], 0);
-    settings += frame.oddRow ? oddRow : 0;
+    if ( options.forceInterlaced )
+      settings += encodings['interlacing'];
+    else
+      settings += frame.oddRow ? oddRow : 0;
     if ( frame.repeatFrames > 0 )
       frame[options.output] = [settings + repeatFrame, frame.repeatFrames, ...frame[options.input]];
     else
