@@ -650,7 +650,7 @@ noisy and messy.
 After sleeping on it for a day or two, I started playing with a few other ideas,
 mainly in an attempt to get rid of the interlacing. I figured that maybe just
 using all of our frames for only the odd lines would give the same total size,
-but look better, even if we would trade in some vertical resolution:
+but look better, even though we would trade in some vertical resolution:
 
 ![Only encoding and rendering odd lines](./pictures/odd-lines.gif)
 
@@ -668,12 +668,12 @@ if we just doubled all the lines:
 This works fine and it doesn't look too bad, but at the same time it does look
 like everything is a bit stretched. Something is clearly a bit off.
 
-When driving home from work the next day, I realised that what what I really
-needed was a way to interpolate the missing lines between the lines above and
-below them. Just copying the line above wastes the information that we have in
-the line below. So I set out to write an algorithm (that I called "smoothing")
-to find that interpolation between the two lines, as a way to fill in the
-missing lines.
+When driving home from work the next day, I realised that what I really needed
+was a way to interpolate the missing lines between the lines above and below
+them. Just copying the line above wastes the information that we have in the
+line below. So I set out to write an algorithm (that I called "smoothing") to
+find that interpolation between the two lines, as a way to fill in the missing
+lines.
 
 ![The smoothed result](./pictures/smoothed.gif)
 
