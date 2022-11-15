@@ -532,7 +532,7 @@ return
   Y := 1
   i := smoothing-pixel
   loop
-    X := 1
+    X := HORIZ_MARGIN
     loop
       # Read the current pixel value
       smoothing-sample-pixel
@@ -583,7 +583,7 @@ return
       Y -= 1
 : smoothing-resume
       X += 1
-      if X != 62 then
+      if X != HORIZ_END then
     again
     Y += 2
     if Y != 31 then
