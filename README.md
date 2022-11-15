@@ -8,14 +8,20 @@ music and all. It's a collaboration between
 [Kouzeru](https://github.com/Kouzeru) and myself for [Octojam
 9](https://itch.io/jam/octojam-9/entries).
 
- * [The entry on Itch.io](https://timendus.itch.io/bad-apple)
- * [Download binaries](https://github.com/Timendus/chip-8-bad-apple/tree/main/bin)
+To play this program yourself:
+
+ * Find our [entry on Itch.io](https://timendus.itch.io/bad-apple)
+ * Download the [CHIP-8 binaries](https://github.com/Timendus/chip-8-bad-apple/tree/main/bin)
  * Run the program in your browser:
    * [Long runtime version](https://timendus.github.io/chip-8-bad-apple/long-runtime.html)
      (Low resolution, low quality, but longest runtime)
    * [High quality version](https://timendus.github.io/chip-8-bad-apple/high-quality.html)
      (High resolution, high quality, but only a tiny part of it)
- * [Watch the boring video version on YouTube](https://youtu.be/Fp9WJB9bxQo) (long runtime, version 1.0 -- video of version 1.1 coming soon)
+
+To watch this program in action:
+
+ * [Watch it  on YouTube](https://youtu.be/Fp9WJB9bxQo) (long runtime, version 1.0 -- video of version 1.1 coming soon)
+ * Watch it being discussed in the [Octojam 9 showcase](https://www.youtube.com/watch?v=F56lJGeqzg0&t=2037s&ab_channel=AwfulJams)
 
 ## The concept
 
