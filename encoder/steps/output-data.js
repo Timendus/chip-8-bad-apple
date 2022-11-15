@@ -12,7 +12,7 @@ module.exports = function(movie, options) {
   // Write data to the Octo files
 
   fs.writeFileSync(options.framesPath,
-    '#data\n\n' +
+    ':segment data\n\n' +
     movie.filter(frame => frame[options.encoded])
          .map(frame => {
            return (
@@ -24,7 +24,7 @@ module.exports = function(movie, options) {
   );
 
   fs.writeFileSync(options.codebookPath,
-    '#data\n\n: huffman-codebook\n' +
+    ':segment data\n\n: huffman-codebook\n' +
     formatForOcto(options.codebook)
   );
 

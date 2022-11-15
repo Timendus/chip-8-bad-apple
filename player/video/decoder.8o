@@ -5,24 +5,24 @@
 :alias height v6
 :alias stride v7
 
-#if HIRES
+:if HIRES
   :const HORIZ_MARGIN 16
   :const OUTPUT_WIDTH 96
   :const OUTPUT_HEIGHT 64
-#else
+:else
   :const HORIZ_MARGIN 8
   :const OUTPUT_WIDTH 48
   :const OUTPUT_HEIGHT 32
-#end
+:end
 :calc HORIZ_END { HORIZ_MARGIN + OUTPUT_WIDTH }
 
 :macro draw-byte {
   sprite X Y 1
-  #if SMOOTHING
+  :if SMOOTHING
     Y += 1
     sprite X Y 1
     Y -= 1
-  #end
+  :end
 }
 
 # Decode the next frame, pointed to by i
@@ -30,10 +30,10 @@
 : decode
   # Load settings byte
   load v0
-  #if SCHIP
+  :if SCHIP
     vF := 1
     i += vF
-  #end
+  :end
   v2 := 1           # Number of bytes consumed so far
 
   # Is this a repeated frame?
@@ -46,7 +46,7 @@
     v2 += 1         # Update number of bytes consumed so far
   end
 
-#if SCROLLING
+:if SCROLLING
   # Do we have to scroll the current display?
   v1 := 1
   v1 &= v0
@@ -76,7 +76,7 @@
     v3 &= v1
     if v3 != 0 then scroll-down 2
   end
-#end
+:end
 
   # Register number of bytes consumed so far
   vF := v2
@@ -138,12 +138,12 @@
     end
   end
 
-#if SINGLEBYTE
+:if SINGLEBYTE
   # Is this frame singleByte compressed?
   v1 := 96
   v1 &= v0
   if v1 == 96 then jump singleByte-decode
-#end
+:end
 
   # Is this frame RLE compressed?
   v1 := 64
@@ -169,11 +169,11 @@
     next-coordinate
     if Y < height then
   again
-  #if SMOOTHING
+  :if SMOOTHING
     jump smoothing
-  #else
+  :else
     return
-  #end
+  :end
 
 # Do the RLE decoding
 # i points to the first run length
@@ -181,10 +181,10 @@
 : rle-decode
   loop
     load v0
-    #if SCHIP
+    :if SCHIP
       vF := 1
       i += vF
-    #end
+    :end
     vF := 1
     update-frame-pointer
     v1 := 128
@@ -220,13 +220,13 @@
 
     if Y < height then
   again
-  #if SMOOTHING
+  :if SMOOTHING
     jump smoothing
-  #else
+  :else
     return
-  #end
+  :end
 
-#if SINGLEBYTE
+:if SINGLEBYTE
 : singleByte-decode
   load v1 - v1
   vF := 1
@@ -237,10 +237,10 @@
     while v1 != 0
     v1 -= 1
     load v0
-    #if SCHIP
+    :if SCHIP
       vF := 1
       i += vF
-    #end
+    :end
     v8 := 31         # Take bottom 5 bits for Y
     v8 &= v0
     if stride == 2 then v8 <<= v8  # Interlacing
@@ -257,9 +257,9 @@
     i += vF
   again
   return
-#end
+:end
 
-#if SPRITING
+:if SPRITING
 # Do the sprite-based decoding
 # i points to the sprite data
 # Don't mess up vB - vE, make sure we update frame pointer
@@ -271,10 +271,10 @@
   update-frame-pointer
   loop
     load v1
-    #if SCHIP
+    :if SCHIP
       vF := 2
       i += vF
-    #end
+    :end
     # Decode frame pointer
     i := long dictionary
     i += v1  i += v1  i += v1  i += v1
@@ -298,7 +298,7 @@
     if v4 != 0 then
   again
   return
-#end
+:end
 
 : next-coordinate
   X += 8
@@ -307,7 +307,7 @@
   Y += stride
   return
 
-#if SMOOTHING
+:if SMOOTHING
 :macro smoothing-sample-pixel {
   sprite X Y 1
   sprite X Y 1
@@ -377,6 +377,6 @@
 
 : smoothing-pixel
   0b10000000
-#end
+:end
 
-#include "huffman.8o"
+:include "huffman.8o"

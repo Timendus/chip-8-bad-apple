@@ -123,13 +123,13 @@
 
   vF := 1
   update-frame-pointer
-  #if SMOOTHING
+  :if SMOOTHING
     jump smoothing
-  #else
+  :else
     return
-  #end
+  :end
 
-#if HUFFMAN_PRECOMPUTE
+:if HUFFMAN_PRECOMPUTE
 # Compute the first 128 entries in the Huffman codebook and save them to the
 # memory below 0x200 🙈
 
@@ -196,4 +196,4 @@
 
 : huffman-precompute-values
   0 1 0 0 128 0 1 0
-#end
+:end

@@ -145,7 +145,7 @@ return
 :macro &&&- { 0b11111100 }
 :macro &&&& { 0b11111111 }
 
-#data
+:segment data
 
 : smpData  # SAMPLE BUFFER DATA  [ 128 bytes ]
   ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----  # 0x00 |        Silence

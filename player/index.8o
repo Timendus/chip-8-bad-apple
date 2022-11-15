@@ -3,7 +3,7 @@
 #  * Video encoding and decoding - Timendus
 #  * Music arrangement and coding - Kouzeru
 
-#include "music/header.8o"
+:include "music/header.8o"
 
 :alias ticks vA
 :alias current-frame-hi vB
@@ -16,9 +16,9 @@
 :const STEPPING 2
 
 : main
-  #if HIRES
+  :if HIRES
     hires
-  #end
+  :end
   clear
   loadSong 0 70 # or 65?
   :alias unpack-hi current-frame-hi
@@ -30,11 +30,11 @@
 
 : main-loop
   # This loop syncs to 15FPS and does the high-frequency stuff
-  #if HIRES
+  :if HIRES
     ticks := 2 # 2/60th = 1/30th of a second = 30 FPS
-  #else
+  :else
     ticks := 6 # 6/60th = 1/10th of a second = 10 FPS
-  #end
+  :end
   loop
     loop
       # Handle key input
@@ -126,17 +126,17 @@
 : safe-storage2
   0 0 0 0
 
-#include "music/player.8o"
-#include "music/song.8o"
+:include "music/player.8o"
+:include "music/song.8o"
 
-#include "video/decoder.8o"
+:include "video/decoder.8o"
 
-#if HIRES
-  #include "video/hires/codebook.8o"
-  #include "video/hires/frames.8o"
-#else
-  #include "video/lores/codebook.8o"
-  #include "video/lores/frames.8o"
-#end
-#data
+:if HIRES
+  :include "video/hires/codebook.8o"
+  :include "video/hires/frames.8o"
+:else
+  :include "video/lores/codebook.8o"
+  :include "video/lores/frames.8o"
+:end
+:segment data
 : the-end  # So we know when we're out of frames
