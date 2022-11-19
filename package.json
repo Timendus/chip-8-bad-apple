@@ -12,7 +12,7 @@
     "build-html": "mkdir -p dist && octo --options octo-config-lores.json bin/bad-apple-long-runtime.8o dist/long-runtime.html && octo --options octo-config-hires.json bin/bad-apple-high-quality.8o dist/high-quality.html"
   },
   "dependencies": {
-    "chipcode": "../../chipcode",
+    "@chipcode/octopus": "^0.2.1",
     "octo-assembler": "^0.1.4",
     "pngjs": "^6.0.0"
   }
