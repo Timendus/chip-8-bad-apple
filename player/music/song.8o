@@ -6,7 +6,7 @@
 # 1bit arrangement by Kouzeru
 # Code by Kouzeru, cut into pieces by Timendus 😄
 
-#data
+:segment data
 
 #+-----------------------+-----------------------+-----------------------+-----------------------+
 #| Song timeline         | Song loop point       | Song properties       | Song sequence data    |
