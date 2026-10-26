@@ -8,7 +8,7 @@ music and all. It's a collaboration between
 [Kouzeru](https://github.com/Kouzeru) and myself for [Octojam
 9](https://itch.io/jam/octojam-9/entries).
 
-To play this program yourself:
+To play this program yourself, either:
 
  * Find our [entry on Itch.io](https://timendus.itch.io/bad-apple)
  * Download the [CHIP-8 binaries](https://github.com/Timendus/chip-8-bad-apple/tree/main/bin)
