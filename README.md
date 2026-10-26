@@ -20,7 +20,7 @@ To play this program yourself:
 
 To watch this program in action:
 
- * [Watch it  on YouTube](https://youtu.be/Fp9WJB9bxQo) (long runtime, version 1.0 -- video of version 1.1 coming soon)
+ * Watch it on YouTube: [version 1.0](https://youtu.be/Fp9WJB9bxQo), [version 1.1](https://www.youtube.com/watch?v=t_T0Zvc_WJQ) (long runtime)
  * Watch it being discussed in the [Octojam 9 showcase](https://www.youtube.com/watch?v=F56lJGeqzg0&t=2037s&ab_channel=AwfulJams)
 
 ## The concept
